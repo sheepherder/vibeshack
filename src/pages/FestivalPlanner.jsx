@@ -1,21 +1,26 @@
 import { useState, useEffect } from 'react'
-import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
+import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core'
+import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
-// Hilfsfunktion für CSV Export
-const exportToCSV = (sessions) => {
-  const headers = ['Tag', 'Startzeit', 'Endzeit', 'Titel', 'Beschreibung', 'Ort', 'Speaker', 'Kategorie']
-  const rows = sessions.map(session => [
-    session.day,
-    session.startTime,
-    session.endTime,
-    session.title,
-    session.description || '',
-    session.location || '',
-    session.speaker || '',
-    session.category || ''
-  ])
+// CSV Export Funktion
+const exportToCSV = (sessions, locations) => {
+  const headers = ['Name', 'Event Days', 'Start Time', 'End Time', 'Description', 'Format', 'Location', 'Speakers', 'Language', 'Tracks']
+  const rows = sessions.map(session => {
+    const location = locations.find(l => l.id === session.locationId)
+    return [
+      session.title,
+      session.day,
+      session.startTime,
+      session.endTime,
+      session.description || '',
+      session.format || '',
+      location?.name || '',
+      session.speakers || '',
+      session.language || 'DE',
+      session.tracks || ''
+    ]
+  })
 
   const csvContent = [
     headers.join(','),
@@ -29,8 +34,87 @@ const exportToCSV = (sessions) => {
   link.click()
 }
 
-// Session Karte Komponente mit Drag & Drop
-function SessionCard({ session, onEdit, onDelete }) {
+// CSV Import Funktion
+const importFromCSV = (csvText, locations) => {
+  const lines = csvText.split('\n')
+  const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim())
+
+  const sessions = []
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue
+
+    // Einfacher CSV Parser (rudimentär, könnte verbessert werden)
+    const values = lines[i].match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || []
+    const row = values.map(v => v.replace(/^"|"$/g, '').replace(/""/g, '"').trim())
+
+    if (row.length < 3) continue
+
+    const nameIdx = headers.findIndex(h => h.toLowerCase().includes('name'))
+    const startIdx = headers.findIndex(h => h.toLowerCase().includes('start'))
+    const endIdx = headers.findIndex(h => h.toLowerCase().includes('end'))
+    const locationIdx = headers.findIndex(h => h.toLowerCase().includes('location'))
+
+    const locationName = row[locationIdx] || ''
+    const location = locations.find(l => l.name.toLowerCase() === locationName.toLowerCase())
+
+    sessions.push({
+      id: `session-${Date.now()}-${i}`,
+      title: row[nameIdx] || `Session ${i}`,
+      startTime: row[startIdx]?.substring(11, 16) || '10:00',
+      endTime: row[endIdx]?.substring(11, 16) || '11:00',
+      locationId: location?.id || locations[0]?.id,
+      day: 1,
+      description: '',
+      format: '',
+      speakers: '',
+      language: 'DE'
+    })
+  }
+
+  return sessions
+}
+
+// Zeitslot Generator (7:00 bis 18:00 in 30-Min-Schritten)
+const generateTimeSlots = () => {
+  const slots = []
+  for (let hour = 7; hour <= 18; hour++) {
+    slots.push(`${String(hour).padStart(2, '0')}:00`)
+    if (hour < 18) slots.push(`${String(hour).padStart(2, '0')}:30`)
+  }
+  return slots
+}
+
+// Grid Cell mit Droppable
+function GridCell({ locationId, timeSlot, sessions, onDrop }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `cell-${locationId}-${timeSlot}`,
+    data: { locationId, timeSlot }
+  })
+
+  const cellSessions = sessions.filter(s =>
+    s.locationId === locationId &&
+    s.startTime <= timeSlot &&
+    s.endTime > timeSlot
+  )
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`grid-cell ${isOver ? 'grid-cell-over' : ''}`}
+      style={{
+        minHeight: cellSessions.length > 0 ? 'auto' : '50px',
+        backgroundColor: isOver ? 'rgba(99, 102, 241, 0.1)' : 'transparent'
+      }}
+    >
+      {cellSessions.map(session => (
+        <SessionBlock key={session.id} session={session} />
+      ))}
+    </div>
+  )
+}
+
+// Draggable Session Block
+function SessionBlock({ session }) {
   const {
     attributes,
     listeners,
@@ -46,142 +130,70 @@ function SessionCard({ session, onEdit, onDelete }) {
     opacity: isDragging ? 0.5 : 1,
   }
 
+  // Berechne Höhe basierend auf Dauer
+  const duration = calculateDuration(session.startTime, session.endTime)
+  const height = duration * 50 // 50px pro 30 Min
+
   return (
     <div
       ref={setNodeRef}
-      style={style}
-      className="session-card"
+      style={{...style, minHeight: `${height}px`}}
+      {...attributes}
+      {...listeners}
+      className="session-block"
     >
-      <div className="session-drag-handle" {...attributes} {...listeners}>
-        ⋮⋮
-      </div>
-      <div className="session-content">
-        <div className="session-time">
-          {session.startTime} - {session.endTime}
-        </div>
-        <div className="session-title">{session.title}</div>
-        {session.speaker && <div className="session-speaker">🎤 {session.speaker}</div>}
-        {session.location && <div className="session-location">📍 {session.location}</div>}
-        {session.category && <div className="session-category">{session.category}</div>}
-      </div>
-      <div className="session-actions">
-        <button onClick={() => onEdit(session)} className="btn-icon" title="Bearbeiten">
-          ✏️
-        </button>
-        <button onClick={() => onDelete(session.id)} className="btn-icon" title="Löschen">
-          🗑️
-        </button>
-      </div>
+      <div className="session-block-time">{session.startTime} - {session.endTime}</div>
+      <div className="session-block-title">{session.title}</div>
     </div>
   )
 }
 
-// Session Editor Modal
-function SessionEditor({ session, onSave, onCancel, day }) {
-  const [formData, setFormData] = useState(
-    session || {
-      day: day,
-      startTime: '10:00',
-      endTime: '11:00',
-      title: '',
-      description: '',
-      location: '',
-      speaker: '',
-      category: ''
-    }
-  )
+// Hilfsfunktion: Berechne Dauer in 30-Min-Slots
+function calculateDuration(start, end) {
+  const [startH, startM] = start.split(':').map(Number)
+  const [endH, endM] = end.split(':').map(Number)
+  const startMinutes = startH * 60 + startM
+  const endMinutes = endH * 60 + endM
+  return (endMinutes - startMinutes) / 30
+}
+
+// Location Editor Modal
+function LocationEditor({ location, onSave, onCancel }) {
+  const [name, setName] = useState(location?.name || '')
+  const [color, setColor] = useState(location?.color || '#6366f1')
 
   const handleSubmit = (e) => {
     e.preventDefault()
     onSave({
-      ...formData,
-      id: session?.id || `session-${Date.now()}`
+      id: location?.id || `loc-${Date.now()}`,
+      name,
+      color
     })
   }
 
   return (
     <div className="modal-overlay" onClick={onCancel}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <h2>{session ? 'Session bearbeiten' : 'Neue Session erstellen'}</h2>
+        <h2>{location ? 'Location bearbeiten' : 'Neue Location'}</h2>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Titel *</label>
+            <label>Name *</label>
             <input
               type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               required
-              placeholder="z.B. Keynote: Die Zukunft der KI"
-            />
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>Startzeit *</label>
-              <input
-                type="time"
-                value={formData.startTime}
-                onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Endzeit *</label>
-              <input
-                type="time"
-                value={formData.endTime}
-                onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label>Speaker</label>
-            <input
-              type="text"
-              value={formData.speaker}
-              onChange={(e) => setFormData({ ...formData, speaker: e.target.value })}
-              placeholder="z.B. Dr. Anna Schmidt"
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Ort</label>
-            <input
-              type="text"
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               placeholder="z.B. Hauptbühne, Workshop-Raum 1"
             />
           </div>
-
           <div className="form-group">
-            <label>Kategorie</label>
-            <select
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            >
-              <option value="">Keine Kategorie</option>
-              <option value="Keynote">Keynote</option>
-              <option value="Workshop">Workshop</option>
-              <option value="Panel">Panel</option>
-              <option value="Performance">Performance</option>
-              <option value="Networking">Networking</option>
-              <option value="Pause">Pause</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label>Beschreibung</label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows="3"
-              placeholder="Kurze Beschreibung der Session..."
+            <label>Farbe</label>
+            <input
+              type="color"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
             />
           </div>
-
           <div className="modal-actions">
             <button type="button" onClick={onCancel} className="btn-secondary">
               Abbrechen
@@ -199,9 +211,15 @@ function SessionEditor({ session, onSave, onCancel, day }) {
 // Hauptkomponente
 function FestivalPlanner() {
   const [sessions, setSessions] = useState([])
+  const [locations, setLocations] = useState([
+    { id: 'loc-1', name: 'Hauptbühne', color: '#6366f1' },
+    { id: 'loc-2', name: 'Workshop-Raum 1', color: '#10b981' },
+    { id: 'loc-3', name: 'Experience Area', color: '#f59e0b' },
+  ])
   const [activeDay, setActiveDay] = useState(1)
-  const [editingSession, setEditingSession] = useState(null)
-  const [isCreating, setIsCreating] = useState(false)
+  const [viewMode, setViewMode] = useState('grid') // 'grid' or 'list'
+  const [editingLocation, setEditingLocation] = useState(null)
+  const [isCreatingLocation, setIsCreatingLocation] = useState(false)
   const [activeId, setActiveId] = useState(null)
 
   const sensors = useSensors(
@@ -219,22 +237,23 @@ function FestivalPlanner() {
     { number: 4, name: 'Tag 4', date: 'So. 14.06.2026' }
   ]
 
+  const timeSlots = generateTimeSlots()
+
   // LocalStorage laden
   useEffect(() => {
-    const saved = localStorage.getItem('festival-sessions-2026')
-    if (saved) {
-      setSessions(JSON.parse(saved))
-    }
+    const savedSessions = localStorage.getItem('festival-sessions-2026')
+    const savedLocations = localStorage.getItem('festival-locations-2026')
+    if (savedSessions) setSessions(JSON.parse(savedSessions))
+    if (savedLocations) setLocations(JSON.parse(savedLocations))
   }, [])
 
   // LocalStorage speichern
   useEffect(() => {
     localStorage.setItem('festival-sessions-2026', JSON.stringify(sessions))
-  }, [sessions])
+    localStorage.setItem('festival-locations-2026', JSON.stringify(locations))
+  }, [sessions, locations])
 
-  const daySessions = sessions
-    .filter(s => s.day === activeDay)
-    .sort((a, b) => a.startTime.localeCompare(b.startTime))
+  const daySessions = sessions.filter(s => s.day === activeDay)
 
   const handleDragStart = (event) => {
     setActiveId(event.active.id)
@@ -243,53 +262,61 @@ function FestivalPlanner() {
   const handleDragEnd = (event) => {
     const { active, over } = event
 
-    if (over && active.id !== over.id) {
-      setSessions((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id)
-        const newIndex = items.findIndex((item) => item.id === over.id)
+    if (over && over.data?.current) {
+      const { locationId, timeSlot } = over.data.current
+      const sessionId = active.id
 
-        const newItems = [...items]
-        const [movedItem] = newItems.splice(oldIndex, 1)
-        newItems.splice(newIndex, 0, movedItem)
-
-        return newItems
-      })
+      setSessions(sessions.map(s =>
+        s.id === sessionId
+          ? { ...s, locationId, startTime: timeSlot, endTime: addMinutes(timeSlot, 60) }
+          : s
+      ))
     }
 
     setActiveId(null)
   }
 
-  const handleSaveSession = (sessionData) => {
-    if (editingSession) {
-      setSessions(sessions.map(s => s.id === sessionData.id ? sessionData : s))
-      setEditingSession(null)
+  const addMinutes = (time, minutes) => {
+    const [h, m] = time.split(':').map(Number)
+    const totalMinutes = h * 60 + m + minutes
+    const newH = Math.floor(totalMinutes / 60)
+    const newM = totalMinutes % 60
+    return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`
+  }
+
+  const handleSaveLocation = (locationData) => {
+    if (editingLocation) {
+      setLocations(locations.map(l => l.id === locationData.id ? locationData : l))
+      setEditingLocation(null)
     } else {
-      setSessions([...sessions, sessionData])
-      setIsCreating(false)
+      setLocations([...locations, locationData])
+      setIsCreatingLocation(false)
     }
   }
 
-  const handleDeleteSession = (id) => {
-    if (confirm('Session wirklich löschen?')) {
-      setSessions(sessions.filter(s => s.id !== id))
+  const handleDeleteLocation = (id) => {
+    if (confirm('Location wirklich löschen?')) {
+      setLocations(locations.filter(l => l.id !== id))
+      // Entferne Sessions dieser Location
+      setSessions(sessions.filter(s => s.locationId !== id))
     }
   }
 
   const handleExportCSV = () => {
-    exportToCSV(sessions)
+    exportToCSV(sessions, locations)
   }
 
-  const handleImportJSON = (e) => {
+  const handleImportCSV = (e) => {
     const file = e.target.files[0]
     if (file) {
       const reader = new FileReader()
       reader.onload = (event) => {
         try {
-          const data = JSON.parse(event.target.result)
-          setSessions(data)
-          alert('Daten erfolgreich importiert!')
+          const importedSessions = importFromCSV(event.target.result, locations)
+          setSessions([...sessions, ...importedSessions])
+          alert(`${importedSessions.length} Sessions erfolgreich importiert!`)
         } catch (error) {
-          alert('Fehler beim Import: Ungültiges JSON-Format')
+          alert('Fehler beim CSV-Import: ' + error.message)
         }
       }
       reader.readAsText(file)
@@ -297,7 +324,8 @@ function FestivalPlanner() {
   }
 
   const handleExportJSON = () => {
-    const dataStr = JSON.stringify(sessions, null, 2)
+    const data = { sessions, locations }
+    const dataStr = JSON.stringify(data, null, 2)
     const blob = new Blob([dataStr], { type: 'application/json' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
@@ -313,25 +341,28 @@ function FestivalPlanner() {
         <div>
           <h1 className="page-title">Festival der Zukunft 2026 📅</h1>
           <p className="page-subtitle">
-            Programmplanung für das Festival - Drag & Drop zum Verschieben
+            Grid-Programmplanung - Locations horizontal, Zeit vertikal
           </p>
         </div>
         <div className="festival-actions">
+          <button onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')} className="btn-secondary">
+            {viewMode === 'grid' ? '📋 Listen-Ansicht' : '📊 Grid-Ansicht'}
+          </button>
           <button onClick={handleExportCSV} className="btn-primary">
             📊 CSV Export (Wix)
           </button>
-          <button onClick={handleExportJSON} className="btn-secondary">
-            💾 Backup (JSON)
-          </button>
           <label className="btn-secondary" style={{ cursor: 'pointer' }}>
-            📁 Import (JSON)
+            📁 CSV Import
             <input
               type="file"
-              accept=".json"
-              onChange={handleImportJSON}
+              accept=".csv"
+              onChange={handleImportCSV}
               style={{ display: 'none' }}
             />
           </label>
+          <button onClick={handleExportJSON} className="btn-secondary">
+            💾 JSON Backup
+          </button>
         </div>
       </div>
 
@@ -363,69 +394,74 @@ function FestivalPlanner() {
         ))}
       </div>
 
-      <div className="festival-day-view">
-        <div className="day-header">
-          <h2>{days[activeDay - 1].name} - {days[activeDay - 1].date}</h2>
-          <button onClick={() => setIsCreating(true)} className="btn-primary">
-            ➕ Session hinzufügen
+      <div className="festival-locations-bar">
+        <h3>Locations:</h3>
+        <div className="locations-list">
+          {locations.map(loc => (
+            <div key={loc.id} className="location-tag" style={{ borderLeft: `4px solid ${loc.color}` }}>
+              {loc.name}
+              <button onClick={() => setEditingLocation(loc)} className="btn-icon">✏️</button>
+              <button onClick={() => handleDeleteLocation(loc.id)} className="btn-icon">🗑️</button>
+            </div>
+          ))}
+          <button onClick={() => setIsCreatingLocation(true)} className="btn-primary btn-small">
+            ➕ Neue Location
           </button>
         </div>
-
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="sessions-list">
-            {daySessions.length === 0 ? (
-              <div className="empty-state">
-                <p>🎭 Noch keine Sessions für diesen Tag</p>
-                <button onClick={() => setIsCreating(true)} className="btn-primary">
-                  Erste Session erstellen
-                </button>
-              </div>
-            ) : (
-              <SortableContext
-                items={daySessions.map(s => s.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {daySessions.map(session => (
-                  <SessionCard
-                    key={session.id}
-                    session={session}
-                    onEdit={setEditingSession}
-                    onDelete={handleDeleteSession}
-                  />
-                ))}
-              </SortableContext>
-            )}
-          </div>
-
-          <DragOverlay>
-            {activeSession ? (
-              <div className="session-card dragging">
-                <div className="session-drag-handle">⋮⋮</div>
-                <div className="session-content">
-                  <div className="session-time">
-                    {activeSession.startTime} - {activeSession.endTime}
-                  </div>
-                  <div className="session-title">{activeSession.title}</div>
-                </div>
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
       </div>
 
-      {(isCreating || editingSession) && (
-        <SessionEditor
-          session={editingSession}
-          day={activeDay}
-          onSave={handleSaveSession}
+      {viewMode === 'grid' && (
+        <div className="festival-grid-container">
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="festival-grid">
+              <div className="grid-header">
+                <div className="grid-time-header">Zeit</div>
+                {locations.map(loc => (
+                  <div key={loc.id} className="grid-location-header" style={{ borderBottom: `3px solid ${loc.color}` }}>
+                    {loc.name}
+                  </div>
+                ))}
+              </div>
+
+              {timeSlots.map(slot => (
+                <div key={slot} className="grid-row">
+                  <div className="grid-time-cell">{slot}</div>
+                  {locations.map(loc => (
+                    <GridCell
+                      key={`${loc.id}-${slot}`}
+                      locationId={loc.id}
+                      timeSlot={slot}
+                      sessions={daySessions}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
+
+            <DragOverlay>
+              {activeSession ? (
+                <div className="session-block dragging">
+                  <div className="session-block-time">{activeSession.startTime} - {activeSession.endTime}</div>
+                  <div className="session-block-title">{activeSession.title}</div>
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        </div>
+      )}
+
+      {(isCreatingLocation || editingLocation) && (
+        <LocationEditor
+          location={editingLocation}
+          onSave={handleSaveLocation}
           onCancel={() => {
-            setIsCreating(false)
-            setEditingSession(null)
+            setIsCreatingLocation(false)
+            setEditingLocation(null)
           }}
         />
       )}
