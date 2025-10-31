@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core'
-import { useSortable } from '@dnd-kit/sortable'
+import { SortableContext, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
 // CSV Export Funktion
@@ -85,7 +85,7 @@ const generateTimeSlots = () => {
 }
 
 // Grid Cell mit Droppable
-function GridCell({ locationId, timeSlot, sessions, onDrop }) {
+function GridCell({ locationId, timeSlot, sessions, onEdit, onDelete }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `cell-${locationId}-${timeSlot}`,
     data: { locationId, timeSlot }
@@ -107,14 +107,19 @@ function GridCell({ locationId, timeSlot, sessions, onDrop }) {
       }}
     >
       {cellSessions.map(session => (
-        <SessionBlock key={session.id} session={session} />
+        <SessionBlock
+          key={session.id}
+          session={session}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       ))}
     </div>
   )
 }
 
 // Draggable Session Block
-function SessionBlock({ session }) {
+function SessionBlock({ session, onEdit, onDelete }) {
   const {
     attributes,
     listeners,
@@ -138,12 +143,20 @@ function SessionBlock({ session }) {
     <div
       ref={setNodeRef}
       style={{...style, minHeight: `${height}px`}}
-      {...attributes}
-      {...listeners}
       className="session-block"
     >
-      <div className="session-block-time">{session.startTime} - {session.endTime}</div>
-      <div className="session-block-title">{session.title}</div>
+      <div {...attributes} {...listeners} style={{ cursor: 'grab', flex: 1 }}>
+        <div className="session-block-time">{session.startTime} - {session.endTime}</div>
+        <div className="session-block-title">{session.title}</div>
+      </div>
+      <div className="session-actions" style={{ position: 'absolute', top: '4px', right: '4px', display: 'flex', gap: '4px' }}>
+        <button onClick={(e) => { e.stopPropagation(); onEdit(session); }} className="btn-icon" style={{ fontSize: '0.8rem', padding: '2px 6px' }}>
+          ✏️
+        </button>
+        <button onClick={(e) => { e.stopPropagation(); onDelete(session.id); }} className="btn-icon" style={{ fontSize: '0.8rem', padding: '2px 6px' }}>
+          🗑️
+        </button>
+      </div>
     </div>
   )
 }
@@ -155,6 +168,144 @@ function calculateDuration(start, end) {
   const startMinutes = startH * 60 + startM
   const endMinutes = endH * 60 + endM
   return (endMinutes - startMinutes) / 30
+}
+
+// Session Editor Modal
+function SessionEditor({ session, onSave, onCancel, day, locations }) {
+  const [formData, setFormData] = useState(
+    session || {
+      day: day,
+      startTime: '10:00',
+      endTime: '11:00',
+      title: '',
+      description: '',
+      locationId: locations[0]?.id || '',
+      speakers: '',
+      format: '',
+      language: 'DE',
+      tracks: ''
+    }
+  )
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSave({
+      ...formData,
+      id: session?.id || `session-${Date.now()}`
+    })
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <h2>{session ? 'Session bearbeiten' : 'Neue Session erstellen'}</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Titel *</label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              required
+              placeholder="z.B. Keynote: Die Zukunft der KI"
+            />
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label>Startzeit *</label>
+              <input
+                type="time"
+                value={formData.startTime}
+                onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Endzeit *</label>
+              <input
+                type="time"
+                value={formData.endTime}
+                onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Location *</label>
+            <select
+              value={formData.locationId}
+              onChange={(e) => setFormData({ ...formData, locationId: e.target.value })}
+              required
+            >
+              {locations.map(loc => (
+                <option key={loc.id} value={loc.id}>{loc.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label>Speaker</label>
+            <input
+              type="text"
+              value={formData.speakers}
+              onChange={(e) => setFormData({ ...formData, speakers: e.target.value })}
+              placeholder="z.B. Dr. Anna Schmidt"
+            />
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label>Format</label>
+              <select
+                value={formData.format}
+                onChange={(e) => setFormData({ ...formData, format: e.target.value })}
+              >
+                <option value="">Kein Format</option>
+                <option value="Keynote">Keynote</option>
+                <option value="Workshop">Workshop</option>
+                <option value="Panel">Panel</option>
+                <option value="Performance">Performance</option>
+                <option value="Networking">Networking</option>
+                <option value="Pause">Pause</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Sprache</label>
+              <select
+                value={formData.language}
+                onChange={(e) => setFormData({ ...formData, language: e.target.value })}
+              >
+                <option value="DE">Deutsch</option>
+                <option value="EN">English</option>
+                <option value="DE/EN">DE/EN</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Beschreibung</label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows="3"
+              placeholder="Kurze Beschreibung der Session..."
+            />
+          </div>
+
+          <div className="modal-actions">
+            <button type="button" onClick={onCancel} className="btn-secondary">
+              Abbrechen
+            </button>
+            <button type="submit" className="btn-primary">
+              Speichern
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
 }
 
 // Location Editor Modal
@@ -220,6 +371,8 @@ function FestivalPlanner() {
   const [viewMode, setViewMode] = useState('grid') // 'grid' or 'list'
   const [editingLocation, setEditingLocation] = useState(null)
   const [isCreatingLocation, setIsCreatingLocation] = useState(false)
+  const [editingSession, setEditingSession] = useState(null)
+  const [isCreatingSession, setIsCreatingSession] = useState(false)
   const [activeId, setActiveId] = useState(null)
 
   const sensors = useSensors(
@@ -284,6 +437,22 @@ function FestivalPlanner() {
     return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`
   }
 
+  const handleSaveSession = (sessionData) => {
+    if (editingSession) {
+      setSessions(sessions.map(s => s.id === sessionData.id ? sessionData : s))
+      setEditingSession(null)
+    } else {
+      setSessions([...sessions, sessionData])
+      setIsCreatingSession(false)
+    }
+  }
+
+  const handleDeleteSession = (id) => {
+    if (confirm('Session wirklich löschen?')) {
+      setSessions(sessions.filter(s => s.id !== id))
+    }
+  }
+
   const handleSaveLocation = (locationData) => {
     if (editingLocation) {
       setLocations(locations.map(l => l.id === locationData.id ? locationData : l))
@@ -323,6 +492,30 @@ function FestivalPlanner() {
     }
   }
 
+  const handleImportJSON = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        try {
+          const data = JSON.parse(event.target.result)
+          if (data.sessions && data.locations) {
+            // Neues Format mit sessions und locations
+            setSessions(data.sessions)
+            setLocations(data.locations)
+          } else if (Array.isArray(data)) {
+            // Altes Format - nur Sessions
+            setSessions(data)
+          }
+          alert('Daten erfolgreich importiert!')
+        } catch (error) {
+          alert('Fehler beim JSON-Import: ' + error.message)
+        }
+      }
+      reader.readAsText(file)
+    }
+  }
+
   const handleExportJSON = () => {
     const data = { sessions, locations }
     const dataStr = JSON.stringify(data, null, 2)
@@ -345,11 +538,14 @@ function FestivalPlanner() {
           </p>
         </div>
         <div className="festival-actions">
+          <button onClick={() => setIsCreatingSession(true)} className="btn-primary">
+            ➕ Session hinzufügen
+          </button>
           <button onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')} className="btn-secondary">
             {viewMode === 'grid' ? '📋 Listen-Ansicht' : '📊 Grid-Ansicht'}
           </button>
-          <button onClick={handleExportCSV} className="btn-primary">
-            📊 CSV Export (Wix)
+          <button onClick={handleExportCSV} className="btn-secondary">
+            📊 CSV Export
           </button>
           <label className="btn-secondary" style={{ cursor: 'pointer' }}>
             📁 CSV Import
@@ -363,6 +559,15 @@ function FestivalPlanner() {
           <button onClick={handleExportJSON} className="btn-secondary">
             💾 JSON Backup
           </button>
+          <label className="btn-secondary" style={{ cursor: 'pointer' }}>
+            📁 JSON Import
+            <input
+              type="file"
+              accept=".json"
+              onChange={handleImportJSON}
+              style={{ display: 'none' }}
+            />
+          </label>
         </div>
       </div>
 
@@ -418,30 +623,34 @@ function FestivalPlanner() {
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            <div className="festival-grid">
-              <div className="grid-header">
-                <div className="grid-time-header">Zeit</div>
-                {locations.map(loc => (
-                  <div key={loc.id} className="grid-location-header" style={{ borderBottom: `3px solid ${loc.color}` }}>
-                    {loc.name}
+            <SortableContext items={daySessions.map(s => s.id)}>
+              <div className="festival-grid">
+                <div className="grid-header">
+                  <div className="grid-time-header">Zeit</div>
+                  {locations.map(loc => (
+                    <div key={loc.id} className="grid-location-header" style={{ borderBottom: `3px solid ${loc.color}` }}>
+                      {loc.name}
+                    </div>
+                  ))}
+                </div>
+
+                {timeSlots.map(slot => (
+                  <div key={slot} className="grid-row">
+                    <div className="grid-time-cell">{slot}</div>
+                    {locations.map(loc => (
+                      <GridCell
+                        key={`${loc.id}-${slot}`}
+                        locationId={loc.id}
+                        timeSlot={slot}
+                        sessions={daySessions}
+                        onEdit={setEditingSession}
+                        onDelete={handleDeleteSession}
+                      />
+                    ))}
                   </div>
                 ))}
               </div>
-
-              {timeSlots.map(slot => (
-                <div key={slot} className="grid-row">
-                  <div className="grid-time-cell">{slot}</div>
-                  {locations.map(loc => (
-                    <GridCell
-                      key={`${loc.id}-${slot}`}
-                      locationId={loc.id}
-                      timeSlot={slot}
-                      sessions={daySessions}
-                    />
-                  ))}
-                </div>
-              ))}
-            </div>
+            </SortableContext>
 
             <DragOverlay>
               {activeSession ? (
@@ -453,6 +662,19 @@ function FestivalPlanner() {
             </DragOverlay>
           </DndContext>
         </div>
+      )}
+
+      {(isCreatingSession || editingSession) && (
+        <SessionEditor
+          session={editingSession}
+          day={activeDay}
+          locations={locations}
+          onSave={handleSaveSession}
+          onCancel={() => {
+            setIsCreatingSession(false)
+            setEditingSession(null)
+          }}
+        />
       )}
 
       {(isCreatingLocation || editingLocation) && (
