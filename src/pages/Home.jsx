@@ -8,6 +8,12 @@ function Home() {
       description: 'Ein einfacher, aber eleganter Taschenrechner für Grundrechenarten',
       path: '/calculator'
     },
+    {
+      id: 'festival-planner',
+      title: 'Festival Planner',
+      description: 'Planungstool für das Festival der Zukunft 2026 mit Drag & Drop und CSV Export',
+      path: '/festival-planner'
+    },
     // Hier können später weitere Experimente hinzugefügt werden
   ]
 

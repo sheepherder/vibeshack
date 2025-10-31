@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom'
 import Home from './pages/Home'
 import Calculator from './pages/Calculator'
+import FestivalPlanner from './pages/FestivalPlanner'
 
 function Navigation() {
   const location = useLocation()
@@ -16,6 +17,9 @@ function Navigation() {
           <Link to="/calculator" className={location.pathname === '/calculator' ? 'active' : ''}>
             Taschenrechner
           </Link>
+          <Link to="/festival-planner" className={location.pathname === '/festival-planner' ? 'active' : ''}>
+            Festival Planner
+          </Link>
         </div>
       </div>
     </nav>
@@ -29,6 +33,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/calculator" element={<Calculator />} />
+        <Route path="/festival-planner" element={<FestivalPlanner />} />
       </Routes>
     </BrowserRouter>
   )
