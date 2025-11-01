@@ -51,9 +51,99 @@ const meditationTypes = [
     recommendedTime: 15,
     color: '#f093fb',
     instructions: {
-      kurz: 'Richte wohlwollende Gedanken an dich selbst, dann an andere. Wiederhole: "Möge ich glücklich sein, mögen alle Wesen glücklich sein."',
-      mittel: 'Beginne mit dir selbst und sende Wünsche des Wohlwollens. Dann erweitere den Kreis: geliebte Menschen, neutrale Personen, schwierige Menschen, alle Lebewesen. Nutze Phrasen wie "Möge ich/du/alle sicher sein, möge ich/du/alle gesund sein, möge ich/du/alle in Frieden leben."',
-      ausführlich: 'Metta-Meditation kultiviert liebende Güte. Beginne in einer bequemen Position. Atme einige Male tief ein und aus. Richte liebevolle Wünsche zuerst an dich selbst: "Möge ich glücklich sein, möge ich gesund sein, möge ich in Sicherheit leben, möge ich mit Leichtigkeit leben." Spüre die Wärme dieser Wünsche in deinem Herzen. Dann denke an einen geliebten Menschen und richte diese Wünsche an ihn/sie. Erweitere den Kreis auf neutrale Personen, auf Menschen, mit denen du Schwierigkeiten hast, und schließlich auf alle Lebewesen. Kehre immer wieder zu den Phrasen und dem Gefühl der liebenden Güte zurück.'
+      kurz: (
+        <>
+          <p>Richte wohlwollende Gedanken an dich selbst, dann an andere. Wiederhole innerlich liebevolle Phrasen:</p>
+          <div className="metta-phrases">
+            <div className="phrase-group">
+              <strong>Klassische Phrasen:</strong>
+              <ul>
+                <li>Möge ich glücklich sein</li>
+                <li>Möge ich gesund sein</li>
+                <li>Möge ich in Sicherheit leben</li>
+                <li>Möge ich mit Leichtigkeit leben</li>
+              </ul>
+            </div>
+          </div>
+        </>
+      ),
+      mittel: (
+        <>
+          <p>Beginne mit dir selbst und sende Wünsche des Wohlwollens. Dann erweitere den Kreis: geliebte Menschen, neutrale Personen, schwierige Menschen, alle Lebewesen.</p>
+          <div className="metta-phrases">
+            <div className="phrase-group">
+              <strong>Traditionelle Phrasen:</strong>
+              <ul>
+                <li>Möge ich/du/alle sicher sein</li>
+                <li>Möge ich/du/alle glücklich sein</li>
+                <li>Möge ich/du/alle gesund sein</li>
+                <li>Möge ich/du/alle in Frieden leben</li>
+              </ul>
+            </div>
+            <div className="phrase-group">
+              <strong>Erweiterte Phrasen:</strong>
+              <ul>
+                <li>Möge ich/du/alle mit Leichtigkeit leben</li>
+                <li>Möge ich/du/alle frei von Leid sein</li>
+                <li>Möge ich/du/alle Freude erfahren</li>
+                <li>Möge ich/du/alle in Harmonie sein</li>
+              </ul>
+            </div>
+          </div>
+        </>
+      ),
+      ausführlich: (
+        <>
+          <p>Metta-Meditation kultiviert liebende Güte und Mitgefühl. Beginne in einer bequemen Position. Atme einige Male tief ein und aus. Richte liebevolle Wünsche zuerst an dich selbst, dann erweitere den Kreis auf andere.</p>
+
+          <div className="metta-phrases">
+            <div className="phrase-group">
+              <strong>Klassische Metta-Phrasen:</strong>
+              <ul>
+                <li>Möge ich glücklich sein</li>
+                <li>Möge ich gesund sein</li>
+                <li>Möge ich in Sicherheit leben</li>
+                <li>Möge ich mit Leichtigkeit leben</li>
+              </ul>
+            </div>
+
+            <div className="phrase-group">
+              <strong>Erweiterte Variationen:</strong>
+              <ul>
+                <li>Möge ich frei von Leid sein</li>
+                <li>Möge ich in Frieden leben</li>
+                <li>Möge ich Freude erfahren</li>
+                <li>Möge ich geliebt sein</li>
+                <li>Möge ich mich selbst annehmen</li>
+                <li>Möge ich in Harmonie sein</li>
+              </ul>
+            </div>
+
+            <div className="phrase-group">
+              <strong>Körperliche Variationen:</strong>
+              <ul>
+                <li>Möge mein Körper stark und gesund sein</li>
+                <li>Möge mein Geist ruhig und klar sein</li>
+                <li>Möge mein Herz offen und liebevoll sein</li>
+              </ul>
+            </div>
+
+            <div className="phrase-group">
+              <strong>Alternative Formulierungen:</strong>
+              <ul>
+                <li>Ich wünsche mir Glück und Wohlbefinden</li>
+                <li>Ich bin würdig, geliebt zu werden</li>
+                <li>Ich erlaube mir, in Frieden zu sein</li>
+                <li>Ich öffne mein Herz für Freude</li>
+              </ul>
+            </div>
+          </div>
+
+          <p style={{ marginTop: '1rem', fontStyle: 'italic' }}>
+            Spüre die Wärme dieser Wünsche in deinem Herzen. Dann denke an einen geliebten Menschen und richte diese Wünsche an ihn/sie. Erweitere den Kreis auf neutrale Personen, auf Menschen, mit denen du Schwierigkeiten hast, und schließlich auf alle Lebewesen. Kehre immer wieder zu den Phrasen und dem Gefühl der liebenden Güte zurück.
+          </p>
+        </>
+      )
     }
   },
   {
@@ -434,6 +524,56 @@ function MeditationTimer() {
           color: var(--text-secondary);
         }
 
+        .instruction-box p {
+          margin-top: 0;
+          margin-bottom: 1rem;
+        }
+
+        .metta-phrases {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 1.5rem;
+          margin-top: 1.5rem;
+        }
+
+        .phrase-group {
+          background: var(--bg-secondary);
+          padding: 1rem;
+          border-radius: 6px;
+          border: 1px solid var(--border);
+        }
+
+        .phrase-group strong {
+          display: block;
+          color: var(--primary);
+          margin-bottom: 0.75rem;
+          font-size: 0.95rem;
+        }
+
+        .phrase-group ul {
+          margin: 0;
+          padding-left: 1.5rem;
+          list-style: none;
+        }
+
+        .phrase-group li {
+          position: relative;
+          padding-left: 0.5rem;
+          margin-bottom: 0.5rem;
+          color: var(--text);
+        }
+
+        .phrase-group li:before {
+          content: "✨";
+          position: absolute;
+          left: -1.5rem;
+          opacity: 0.7;
+        }
+
+        .phrase-group li:last-child {
+          margin-bottom: 0;
+        }
+
         .timer-setup {
           display: flex;
           flex-direction: column;
@@ -619,6 +759,15 @@ function MeditationTimer() {
 
           .detail-btn {
             flex: 1;
+          }
+
+          .metta-phrases {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+          }
+
+          .phrase-group {
+            padding: 0.75rem;
           }
 
           .time-circle {
