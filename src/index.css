@@ -670,7 +670,6 @@ nav a.active {
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
-  pointer-events: none;
 }
 
 .session-block-title {
@@ -687,7 +686,6 @@ nav a.active {
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
-  pointer-events: none;
 }
 
 /* Responsive */
