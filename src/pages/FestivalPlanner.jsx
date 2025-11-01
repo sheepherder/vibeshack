@@ -92,7 +92,7 @@ const generateTimeSlots = (intervalMinutes = 30) => {
 }
 
 // Grid Cell mit Droppable - Zeigt nur Sessions, die in diesem Slot beginnen
-function GridCell({ locationId, timeSlot, sessions, onEdit, onDelete, slotHeightPx }) {
+function GridCell({ locationId, timeSlot, sessions, onEdit, onDelete, slotHeightPx, activeSession, overId, timeSlots }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `cell-${locationId}-${timeSlot}`,
     data: { locationId, timeSlot }
@@ -104,14 +104,37 @@ function GridCell({ locationId, timeSlot, sessions, onEdit, onDelete, slotHeight
     s.startTime === timeSlot
   )
 
+  // Prüfen, ob diese Zelle gehighlightet werden sollte
+  let shouldHighlight = isOver
+  if (activeSession && overId) {
+    // Extrahiere locationId und timeSlot aus overId
+    const overCellMatch = overId.match(/^cell-(.+)-(\d{2}:\d{2})$/)
+    if (overCellMatch) {
+      const [, overLocationId, overTimeSlot] = overCellMatch
+
+      // Highlight nur wenn gleiche Location
+      if (overLocationId === locationId) {
+        // Berechne ob diese Zelle innerhalb der Event-Dauer liegt
+        const durationMinutes = calculateDurationInMinutes(activeSession.startTime, activeSession.endTime)
+        const overTimeMinutes = timeToMinutes(overTimeSlot)
+        const thisTimeMinutes = timeToMinutes(timeSlot)
+        const endTimeMinutes = overTimeMinutes + durationMinutes
+
+        if (thisTimeMinutes >= overTimeMinutes && thisTimeMinutes < endTimeMinutes) {
+          shouldHighlight = true
+        }
+      }
+    }
+  }
+
   return (
     <div
       ref={setNodeRef}
-      className={`grid-cell ${isOver ? 'grid-cell-over' : ''}`}
+      className={`grid-cell ${shouldHighlight ? 'grid-cell-over' : ''}`}
       style={{
         height: `${slotHeightPx}px`,
         minHeight: `${slotHeightPx}px`,
-        backgroundColor: isOver ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+        backgroundColor: shouldHighlight ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
         position: 'relative'
       }}
     >
@@ -126,6 +149,12 @@ function GridCell({ locationId, timeSlot, sessions, onEdit, onDelete, slotHeight
       ))}
     </div>
   )
+}
+
+// Hilfsfunktion: Konvertiere Zeit zu Minuten seit Mitternacht
+function timeToMinutes(time) {
+  const [h, m] = time.split(':').map(Number)
+  return h * 60 + m
 }
 
 // Draggable Session Block mit variabler Höhe basierend auf Dauer
@@ -423,6 +452,7 @@ function FestivalPlanner() {
   const [editingSession, setEditingSession] = useState(null)
   const [isCreatingSession, setIsCreatingSession] = useState(false)
   const [activeId, setActiveId] = useState(null)
+  const [overId, setOverId] = useState(null)
   const [zoomLevel, setZoomLevel] = useState(30) // Zeitintervall in Minuten: 15, 30, 60
 
   const sensors = useSensors(
@@ -464,6 +494,15 @@ function FestivalPlanner() {
     setActiveId(event.active.id)
   }
 
+  const handleDragOver = (event) => {
+    const { over } = event
+    if (over) {
+      setOverId(over.id)
+    } else {
+      setOverId(null)
+    }
+  }
+
   const handleDragEnd = (event) => {
     const { active, over } = event
 
@@ -484,6 +523,7 @@ function FestivalPlanner() {
     }
 
     setActiveId(null)
+    setOverId(null)
   }
 
   const addMinutes = (time, minutes) => {
@@ -706,6 +746,7 @@ function FestivalPlanner() {
             sensors={sensors}
             collisionDetection={closestCorners}
             onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={daySessions.map(s => s.id)}>
@@ -731,6 +772,9 @@ function FestivalPlanner() {
                         onEdit={setEditingSession}
                         onDelete={handleDeleteSession}
                         slotHeightPx={slotHeightPx}
+                        activeSession={activeSession}
+                        overId={overId}
+                        timeSlots={timeSlots}
                       />
                     ))}
                   </div>
