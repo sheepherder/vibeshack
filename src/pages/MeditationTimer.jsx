@@ -207,11 +207,9 @@ function MeditationTimer() {
     audio.addEventListener('canplaythrough', () => {
       bowlAudioRef.current = audio
       setAudioLoaded(true)
-      console.log('✅ Klangschalen-Sample erfolgreich geladen')
     })
 
     audio.addEventListener('error', () => {
-      console.log('ℹ️ Keine Audio-Datei gefunden - verwende synthetischen Fallback-Sound')
       setAudioLoaded(false)
     })
 
@@ -233,8 +231,7 @@ function MeditationTimer() {
     if (audioLoaded && bowlAudioRef.current) {
       // Verwende echtes Sample
       bowlAudioRef.current.currentTime = 0
-      bowlAudioRef.current.play().catch(err => {
-        console.log('Fehler beim Abspielen der Audio-Datei:', err)
+      bowlAudioRef.current.play().catch(() => {
         // Fallback bei Fehler
         playSyntheticBowlSound(audioContextRef.current)
       })
