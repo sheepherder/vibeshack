@@ -6,17 +6,21 @@
     <title>VibeShack - Experimente & Ideen</title>
     <script>
       // GitHub Pages SPA redirect hack
-      // Store the current path and redirect to the base URL
+      // Encode the path in URL parameters and redirect to index
       (function() {
-        var path = window.location.pathname.replace(/^\/vibeshack/, '');
-        if (path && path !== '/') {
-          sessionStorage.setItem('redirectPath', path + window.location.search + window.location.hash);
-        }
-        window.location.replace('/vibeshack/');
+        var pathSegmentsToKeep = 1;
+        var l = window.location;
+        var redirect = l.pathname.slice(0, l.pathname.indexOf('/', 1) + 1);
+
+        l.replace(
+          redirect + '?p=/' +
+          l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+          (l.search ? '&q=' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+          l.hash
+        );
       })();
     </script>
   </head>
   <body>
-    <div id="root"></div>
   </body>
 </html>
