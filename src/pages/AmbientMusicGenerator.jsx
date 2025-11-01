@@ -258,48 +258,6 @@ function AmbientMusicGenerator() {
     }
   }, [isPlaying])
 
-  // Auto Mode - automatische Track-Änderungen
-  useEffect(() => {
-    if (autoMode && isPlaying) {
-      const scheduleNextChange = () => {
-        const delay = Math.random() * 15000 + 10000 // 10-25 Sekunden
-        autoModeTimerRef.current = setTimeout(() => {
-          const availableTracks = tracks.map(t => t.id)
-          const currentlyActive = Array.from(activeTracks)
-
-          // Entscheide ob Track hinzufügen oder entfernen
-          if (Math.random() > 0.5 && currentlyActive.length < tracks.length) {
-            // Track hinzufügen
-            const inactive = availableTracks.filter(id => !activeTracks.has(id))
-            if (inactive.length > 0) {
-              const trackToAdd = inactive[Math.floor(Math.random() * inactive.length)]
-              toggleTrack(trackToAdd)
-            }
-          } else if (currentlyActive.length > 1) {
-            // Track entfernen
-            const trackToRemove = currentlyActive[Math.floor(Math.random() * currentlyActive.length)]
-            toggleTrack(trackToRemove)
-          }
-
-          scheduleNextChange()
-        }, delay)
-      }
-
-      scheduleNextChange()
-    } else {
-      if (autoModeTimerRef.current) {
-        clearTimeout(autoModeTimerRef.current)
-        autoModeTimerRef.current = null
-      }
-    }
-
-    return () => {
-      if (autoModeTimerRef.current) {
-        clearTimeout(autoModeTimerRef.current)
-      }
-    }
-  }, [autoMode, isPlaying, activeTracks, toggleTrack, tracks])
-
   const startAudio = async () => {
     console.log('Starting audio...')
 
@@ -375,6 +333,48 @@ function AmbientMusicGenerator() {
       return newActiveTracks
     })
   }, [])  // Keine Dependencies da wir nur Refs verwenden
+
+  // Auto Mode - automatische Track-Änderungen
+  useEffect(() => {
+    if (autoMode && isPlaying) {
+      const scheduleNextChange = () => {
+        const delay = Math.random() * 15000 + 10000 // 10-25 Sekunden
+        autoModeTimerRef.current = setTimeout(() => {
+          const availableTracks = tracks.map(t => t.id)
+          const currentlyActive = Array.from(activeTracks)
+
+          // Entscheide ob Track hinzufügen oder entfernen
+          if (Math.random() > 0.5 && currentlyActive.length < tracks.length) {
+            // Track hinzufügen
+            const inactive = availableTracks.filter(id => !activeTracks.has(id))
+            if (inactive.length > 0) {
+              const trackToAdd = inactive[Math.floor(Math.random() * inactive.length)]
+              toggleTrack(trackToAdd)
+            }
+          } else if (currentlyActive.length > 1) {
+            // Track entfernen
+            const trackToRemove = currentlyActive[Math.floor(Math.random() * currentlyActive.length)]
+            toggleTrack(trackToRemove)
+          }
+
+          scheduleNextChange()
+        }, delay)
+      }
+
+      scheduleNextChange()
+    } else {
+      if (autoModeTimerRef.current) {
+        clearTimeout(autoModeTimerRef.current)
+        autoModeTimerRef.current = null
+      }
+    }
+
+    return () => {
+      if (autoModeTimerRef.current) {
+        clearTimeout(autoModeTimerRef.current)
+      }
+    }
+  }, [autoMode, isPlaying, activeTracks, toggleTrack, tracks])
 
   return (
     <div className="ambient-generator">
