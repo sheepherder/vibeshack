@@ -74,27 +74,34 @@ const importFromCSV = (csvText, locations) => {
   return sessions
 }
 
-// Zeitslot Generator (7:00 bis 18:00 in 30-Min-Schritten)
-const generateTimeSlots = () => {
+// Zeitslot Generator mit konfigurierbarem Intervall
+const generateTimeSlots = (intervalMinutes = 30) => {
   const slots = []
-  for (let hour = 7; hour <= 18; hour++) {
-    slots.push(`${String(hour).padStart(2, '0')}:00`)
-    if (hour < 18) slots.push(`${String(hour).padStart(2, '0')}:30`)
+  const startHour = 7
+  const endHour = 18
+  const totalMinutes = (endHour - startHour) * 60
+
+  for (let minutes = 0; minutes <= totalMinutes; minutes += intervalMinutes) {
+    const hour = startHour + Math.floor(minutes / 60)
+    const minute = minutes % 60
+    if (hour <= endHour) {
+      slots.push(`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`)
+    }
   }
   return slots
 }
 
-// Grid Cell mit Droppable
-function GridCell({ locationId, timeSlot, sessions, onEdit, onDelete }) {
+// Grid Cell mit Droppable - Zeigt nur Sessions, die in diesem Slot beginnen
+function GridCell({ locationId, timeSlot, sessions, onEdit, onDelete, slotHeightPx }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `cell-${locationId}-${timeSlot}`,
     data: { locationId, timeSlot }
   })
 
+  // Nur Sessions anzeigen, die in diesem exakten Zeitslot beginnen
   const cellSessions = sessions.filter(s =>
     s.locationId === locationId &&
-    s.startTime <= timeSlot &&
-    s.endTime > timeSlot
+    s.startTime === timeSlot
   )
 
   return (
@@ -102,8 +109,10 @@ function GridCell({ locationId, timeSlot, sessions, onEdit, onDelete }) {
       ref={setNodeRef}
       className={`grid-cell ${isOver ? 'grid-cell-over' : ''}`}
       style={{
-        minHeight: cellSessions.length > 0 ? 'auto' : '50px',
-        backgroundColor: isOver ? 'rgba(99, 102, 241, 0.1)' : 'transparent'
+        height: `${slotHeightPx}px`,
+        minHeight: `${slotHeightPx}px`,
+        backgroundColor: isOver ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+        position: 'relative'
       }}
     >
       {cellSessions.map(session => (
@@ -112,14 +121,15 @@ function GridCell({ locationId, timeSlot, sessions, onEdit, onDelete }) {
           session={session}
           onEdit={onEdit}
           onDelete={onDelete}
+          slotHeightPx={slotHeightPx}
         />
       ))}
     </div>
   )
 }
 
-// Draggable Session Block
-function SessionBlock({ session, onEdit, onDelete }) {
+// Draggable Session Block mit variabler Höhe basierend auf Dauer
+function SessionBlock({ session, onEdit, onDelete, slotHeightPx }) {
   const {
     attributes,
     listeners,
@@ -135,14 +145,25 @@ function SessionBlock({ session, onEdit, onDelete }) {
     opacity: isDragging ? 0.5 : 1,
   }
 
-  // Berechne Höhe basierend auf Dauer
-  const duration = calculateDuration(session.startTime, session.endTime)
-  const height = duration * 50 // 50px pro 30 Min
+  // Berechne Höhe basierend auf Dauer in Minuten
+  const durationMinutes = calculateDurationInMinutes(session.startTime, session.endTime)
+  const height = (durationMinutes / 30) * slotHeightPx // Höhe proportional zur Slot-Höhe
 
   return (
     <div
       ref={setNodeRef}
-      style={{...style, minHeight: `${height}px`, display: 'flex', flexDirection: 'column'}}
+      style={{
+        ...style,
+        height: `${height}px`,
+        minHeight: `${height}px`,
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 5
+      }}
       className="session-block"
     >
       <div
@@ -176,6 +197,16 @@ function SessionBlock({ session, onEdit, onDelete }) {
       </div>
     </div>
   )
+}
+
+// Hilfsfunktion: Berechne Dauer in Minuten
+function calculateDurationInMinutes(start, end) {
+  if (!start || !end) return 60 // Fallback: 60 Minuten
+  const [startH, startM] = start.split(':').map(Number)
+  const [endH, endM] = end.split(':').map(Number)
+  const startMinutes = startH * 60 + startM
+  const endMinutes = endH * 60 + endM
+  return endMinutes - startMinutes
 }
 
 // Hilfsfunktion: Berechne Dauer in 30-Min-Slots
@@ -392,6 +423,7 @@ function FestivalPlanner() {
   const [editingSession, setEditingSession] = useState(null)
   const [isCreatingSession, setIsCreatingSession] = useState(false)
   const [activeId, setActiveId] = useState(null)
+  const [zoomLevel, setZoomLevel] = useState(30) // Zeitintervall in Minuten: 15, 30, 60
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -408,7 +440,9 @@ function FestivalPlanner() {
     { number: 4, name: 'Tag 4', date: 'So. 14.06.2026' }
   ]
 
-  const timeSlots = generateTimeSlots()
+  const timeSlots = generateTimeSlots(zoomLevel)
+  // Berechne Slot-Höhe: Bei 30 Min = 60px, proportional anpassen
+  const slotHeightPx = (30 / zoomLevel) * 60
 
   // LocalStorage laden
   useEffect(() => {
@@ -450,15 +484,6 @@ function FestivalPlanner() {
     }
 
     setActiveId(null)
-  }
-
-  const calculateDurationInMinutes = (start, end) => {
-    if (!start || !end) return 60 // Fallback: 60 Minuten
-    const [startH, startM] = start.split(':').map(Number)
-    const [endH, endM] = end.split(':').map(Number)
-    const startMinutes = startH * 60 + startM
-    const endMinutes = endH * 60 + endM
-    return endMinutes - startMinutes
   }
 
   const addMinutes = (time, minutes) => {
@@ -630,10 +655,36 @@ function FestivalPlanner() {
 
       <div className="festival-locations-bar">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h3 style={{ margin: 0 }}>Locations:</h3>
-          <button onClick={() => setIsCreatingSession(true)} className="btn-primary">
-            ➕ Session hinzufügen
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <h3 style={{ margin: 0 }}>Locations:</h3>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.9rem', color: '#666' }}>Zoom:</span>
+            <button
+              onClick={() => setZoomLevel(60)}
+              className={zoomLevel === 60 ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
+              style={{ padding: '4px 8px', fontSize: '0.85rem' }}
+            >
+              1h
+            </button>
+            <button
+              onClick={() => setZoomLevel(30)}
+              className={zoomLevel === 30 ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
+              style={{ padding: '4px 8px', fontSize: '0.85rem' }}
+            >
+              30min
+            </button>
+            <button
+              onClick={() => setZoomLevel(15)}
+              className={zoomLevel === 15 ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
+              style={{ padding: '4px 8px', fontSize: '0.85rem' }}
+            >
+              15min
+            </button>
+            <button onClick={() => setIsCreatingSession(true)} className="btn-primary" style={{ marginLeft: '1rem' }}>
+              ➕ Session hinzufügen
+            </button>
+          </div>
         </div>
         <div className="locations-list">
           {locations.map(loc => (
@@ -679,6 +730,7 @@ function FestivalPlanner() {
                         sessions={daySessions}
                         onEdit={setEditingSession}
                         onDelete={handleDeleteSession}
+                        slotHeightPx={slotHeightPx}
                       />
                     ))}
                   </div>
