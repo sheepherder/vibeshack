@@ -88,6 +88,7 @@ function Calculator() {
         </div>
 
         <div className="calculator-buttons">
+          {/* Zeile 1: Clear und Operatoren */}
           <button className="calculator-button clear" onClick={clear}>
             C
           </button>
@@ -101,6 +102,7 @@ function Calculator() {
             −
           </button>
 
+          {/* Zeile 2: 7, 8, 9 und + (erstreckt sich über 3 Zeilen) */}
           <button className="calculator-button" onClick={() => inputDigit(7)}>
             7
           </button>
@@ -110,10 +112,11 @@ function Calculator() {
           <button className="calculator-button" onClick={() => inputDigit(9)}>
             9
           </button>
-          <button className="calculator-button operator" onClick={() => performOperation('+')}>
+          <button className="calculator-button operator tall" onClick={() => performOperation('+')}>
             +
           </button>
 
+          {/* Zeile 3: 4, 5, 6 */}
           <button className="calculator-button" onClick={() => inputDigit(4)}>
             4
           </button>
@@ -123,24 +126,25 @@ function Calculator() {
           <button className="calculator-button" onClick={() => inputDigit(6)}>
             6
           </button>
+
+          {/* Zeile 4: 1, 2, 3 */}
           <button className="calculator-button" onClick={() => inputDigit(1)}>
             1
           </button>
-
           <button className="calculator-button" onClick={() => inputDigit(2)}>
             2
           </button>
           <button className="calculator-button" onClick={() => inputDigit(3)}>
             3
           </button>
-          <button className="calculator-button" onClick={() => inputDigit(0)}>
+
+          {/* Zeile 5: 0 (breit), . und = */}
+          <button className="calculator-button wide" onClick={() => inputDigit(0)}>
             0
           </button>
-
           <button className="calculator-button" onClick={inputDecimal}>
             .
           </button>
-
           <button className="calculator-button equals" onClick={handleEquals}>
             =
           </button>
