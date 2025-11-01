@@ -11,11 +11,10 @@ function Navigation() {
   return (
     <nav>
       <div className="container">
-        <h1>🎨 VibeShack</h1>
+        <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <h1>🎨 VibeShack</h1>
+        </Link>
         <div>
-          <Link to="/" className={location.pathname === '/' ? 'active' : ''}>
-            Home
-          </Link>
           <Link to="/calculator" className={location.pathname === '/calculator' ? 'active' : ''}>
             Taschenrechner
           </Link>
