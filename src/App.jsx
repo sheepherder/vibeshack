@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom'
+import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom'
 import Home from './pages/Home'
 import Calculator from './pages/Calculator'
 import FestivalPlanner from './pages/FestivalPlanner'
@@ -28,14 +28,14 @@ function Navigation() {
 
 function App() {
   return (
-    <BrowserRouter basename="/vibeshack">
+    <HashRouter>
       <Navigation />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/calculator" element={<Calculator />} />
         <Route path="/festival-planner" element={<FestivalPlanner />} />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   )
 }
 
