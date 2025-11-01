@@ -268,22 +268,21 @@ function AmbientMusicGenerator() {
     // Audio Engine initialisieren (nur beim ersten Mal)
     initializeAudioEngine()
 
-    // Transport starten
-    Tone.Transport.start()
-    setIsPlaying(true)
-
-    // Starte alle aktiven Tracks
+    // Starte alle aktiven Tracks (BEVOR Transport startet)
     activeTracks.forEach(trackId => {
       const sequence = sequencesRef.current[trackId]
       const volume = volumesRef.current[trackId]
       if (sequence && volume) {
-        // Sicherstellen dass die Sequence gestoppt ist bevor wir sie starten
-        sequence.stop()
+        // Schedule die Sequence zum Start bei Zeit 0
         sequence.start(0)
         const targetVolume = TRACK_VOLUMES[trackId]
         volume.volume.rampTo(targetVolume, 2)
       }
     })
+
+    // Jetzt Transport starten - alle Sequences sind bereits geplant
+    Tone.Transport.start()
+    setIsPlaying(true)
   }
 
   const stopAudio = () => {
@@ -321,9 +320,8 @@ function AmbientMusicGenerator() {
         newActiveTracks.add(trackId)
 
         if (Tone.Transport.state === 'started') {
-          // Sicherstellen dass die Sequence gestoppt ist bevor wir sie starten
-          sequence.stop()
-          sequence.start(0)
+          // Starte die Sequence sofort (ohne Zeit-Parameter = nächster Beat)
+          sequence.start()
           volume.volume.setValueAtTime(-60, Tone.now())
           const targetVolume = TRACK_VOLUMES[trackId]
           volume.volume.rampTo(targetVolume, 2) // 2 Sekunden Fade-in
