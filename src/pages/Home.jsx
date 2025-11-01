@@ -15,6 +15,10 @@ function Home() {
       path: '/festival-planner'
     },
     {
+      id: 'ambient-music',
+      title: '🌙 Night Drive Ambient Generator',
+      description: 'Interaktiver Ambient Music Generator mit nahtlosem Mixing, verschiedenen Styles und Auto-Mode für relaxte elektrische Vibes',
+      path: '/ambient-music'
       id: 'meditation-timer',
       title: 'Meditations-Timer',
       description: 'Timer für verschiedene Meditationsarten mit Instruktionen, anpassbaren Zeiten und Klangschalen-Sound',
