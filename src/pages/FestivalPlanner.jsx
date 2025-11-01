@@ -142,18 +142,35 @@ function SessionBlock({ session, onEdit, onDelete }) {
   return (
     <div
       ref={setNodeRef}
-      style={{...style, minHeight: `${height}px`}}
+      style={{...style, minHeight: `${height}px`, display: 'flex', flexDirection: 'column'}}
       className="session-block"
     >
-      <div {...attributes} {...listeners} style={{ cursor: 'grab', flex: 1 }}>
+      <div
+        {...attributes}
+        {...listeners}
+        style={{
+          cursor: isDragging ? 'grabbing' : 'grab',
+          flex: 1,
+          paddingRight: '60px',
+          position: 'relative'
+        }}
+      >
         <div className="session-block-time">{session.startTime} - {session.endTime}</div>
         <div className="session-block-title">{session.title}</div>
       </div>
-      <div className="session-actions" style={{ position: 'absolute', top: '4px', right: '4px', display: 'flex', gap: '4px' }}>
-        <button onClick={(e) => { e.stopPropagation(); onEdit(session); }} className="btn-icon" style={{ fontSize: '0.8rem', padding: '2px 6px' }}>
+      <div className="session-actions" style={{ position: 'absolute', top: '4px', right: '4px', display: 'flex', gap: '4px', zIndex: 10 }}>
+        <button
+          onClick={(e) => { e.stopPropagation(); onEdit(session); }}
+          className="btn-icon"
+          style={{ fontSize: '0.8rem', padding: '4px 8px', background: 'rgba(0,0,0,0.3)', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+        >
           ✏️
         </button>
-        <button onClick={(e) => { e.stopPropagation(); onDelete(session.id); }} className="btn-icon" style={{ fontSize: '0.8rem', padding: '2px 6px' }}>
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(session.id); }}
+          className="btn-icon"
+          style={{ fontSize: '0.8rem', padding: '4px 8px', background: 'rgba(0,0,0,0.3)', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+        >
           🗑️
         </button>
       </div>
@@ -163,6 +180,7 @@ function SessionBlock({ session, onEdit, onDelete }) {
 
 // Hilfsfunktion: Berechne Dauer in 30-Min-Slots
 function calculateDuration(start, end) {
+  if (!start || !end) return 2 // Fallback: 2 Slots = 1 Stunde
   const [startH, startM] = start.split(':').map(Number)
   const [endH, endM] = end.split(':').map(Number)
   const startMinutes = startH * 60 + startM
@@ -378,9 +396,7 @@ function FestivalPlanner() {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 10,
-        delay: 100,
-        tolerance: 5,
+        distance: 5,
       },
     })
   )
@@ -421,14 +437,28 @@ function FestivalPlanner() {
       const { locationId, timeSlot } = over.data.current
       const sessionId = active.id
 
-      setSessions(sessions.map(s =>
-        s.id === sessionId
-          ? { ...s, locationId, startTime: timeSlot, endTime: addMinutes(timeSlot, 60) }
-          : s
-      ))
+      setSessions(sessions.map(s => {
+        if (s.id === sessionId) {
+          // Berechne die ursprüngliche Dauer der Session
+          const originalDuration = calculateDurationInMinutes(s.startTime, s.endTime)
+          // Wende diese Dauer auf die neue Startzeit an
+          const newEndTime = addMinutes(timeSlot, originalDuration)
+          return { ...s, locationId, startTime: timeSlot, endTime: newEndTime }
+        }
+        return s
+      }))
     }
 
     setActiveId(null)
+  }
+
+  const calculateDurationInMinutes = (start, end) => {
+    if (!start || !end) return 60 // Fallback: 60 Minuten
+    const [startH, startM] = start.split(':').map(Number)
+    const [endH, endM] = end.split(':').map(Number)
+    const startMinutes = startH * 60 + startM
+    const endMinutes = endH * 60 + endM
+    return endMinutes - startMinutes
   }
 
   const addMinutes = (time, minutes) => {
