@@ -14,6 +14,12 @@ function Home() {
       description: 'Planungstool für das Festival der Zukunft 2026 mit Drag & Drop und CSV Export',
       path: '/festival-planner'
     },
+    {
+      id: 'meditation-timer',
+      title: 'Meditations-Timer',
+      description: 'Timer für verschiedene Meditationsarten mit Instruktionen, anpassbaren Zeiten und Klangschalen-Sound',
+      path: '/meditation-timer'
+    },
     // Hier können später weitere Experimente hinzugefügt werden
   ]
 
