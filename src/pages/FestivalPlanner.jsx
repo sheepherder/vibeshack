@@ -92,7 +92,7 @@ const generateTimeSlots = (intervalMinutes = 30) => {
 }
 
 // Grid Cell mit Droppable - Zeigt nur Sessions, die in diesem Slot beginnen
-function GridCell({ locationId, timeSlot, sessions, onEdit, onDelete, slotHeightPx, activeSession, overId, timeSlots }) {
+function GridCell({ locationId, timeSlot, sessions, onEdit, onDelete, slotHeightPx, activeSession, overId, timeSlots, zoomLevel }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `cell-${locationId}-${timeSlot}`,
     data: { locationId, timeSlot }
@@ -145,6 +145,7 @@ function GridCell({ locationId, timeSlot, sessions, onEdit, onDelete, slotHeight
           onEdit={onEdit}
           onDelete={onDelete}
           slotHeightPx={slotHeightPx}
+          zoomLevel={zoomLevel}
         />
       ))}
     </div>
@@ -158,7 +159,7 @@ function timeToMinutes(time) {
 }
 
 // Draggable Session Block mit variabler Höhe basierend auf Dauer
-function SessionBlock({ session, onEdit, onDelete, slotHeightPx }) {
+function SessionBlock({ session, onEdit, onDelete, slotHeightPx, zoomLevel }) {
   const {
     attributes,
     listeners,
@@ -174,9 +175,9 @@ function SessionBlock({ session, onEdit, onDelete, slotHeightPx }) {
     opacity: isDragging ? 0.5 : 1,
   }
 
-  // Berechne Höhe basierend auf Dauer in Minuten
+  // Berechne Höhe basierend auf Dauer in Minuten und aktuellem Zoom-Level
   const durationMinutes = calculateDurationInMinutes(session.startTime, session.endTime)
-  const height = (durationMinutes / 30) * slotHeightPx // Höhe proportional zur Slot-Höhe
+  const height = (durationMinutes / zoomLevel) * slotHeightPx // Höhe = Anzahl Slots * Slot-Höhe
 
   return (
     <div
@@ -471,8 +472,8 @@ function FestivalPlanner() {
   ]
 
   const timeSlots = generateTimeSlots(zoomLevel)
-  // Berechne Slot-Höhe: Bei 30 Min = 60px, proportional anpassen
-  const slotHeightPx = (30 / zoomLevel) * 60
+  // Konstante Slot-Höhe unabhängig vom Zoom-Level
+  const slotHeightPx = 60
 
   // LocalStorage laden
   useEffect(() => {
@@ -775,6 +776,7 @@ function FestivalPlanner() {
                         activeSession={activeSession}
                         overId={overId}
                         timeSlots={timeSlots}
+                        zoomLevel={zoomLevel}
                       />
                     ))}
                   </div>
@@ -785,7 +787,7 @@ function FestivalPlanner() {
             <DragOverlay>
               {activeSession ? (() => {
                 const durationMinutes = calculateDurationInMinutes(activeSession.startTime, activeSession.endTime)
-                const height = (durationMinutes / 30) * slotHeightPx
+                const height = (durationMinutes / zoomLevel) * slotHeightPx
                 return (
                   <div
                     className="session-block dragging"
