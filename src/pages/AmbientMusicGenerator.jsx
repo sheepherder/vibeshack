@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import * as Tone from 'tone'
 import './AmbientMusicGenerator.css'
 import { TRACK_DEFINITIONS, TRACK_VOLUMES, BPM } from './audioConfig'
@@ -298,7 +298,7 @@ function AmbientMusicGenerator() {
         clearTimeout(autoModeTimerRef.current)
       }
     }
-  }, [autoMode, isPlaying, activeTracks])
+  }, [autoMode, isPlaying, activeTracks, toggleTrack, tracks])
 
   const startAudio = async () => {
     console.log('Starting audio...')
@@ -319,6 +319,8 @@ function AmbientMusicGenerator() {
       const sequence = sequencesRef.current[trackId]
       const volume = volumesRef.current[trackId]
       if (sequence && volume) {
+        // Sicherstellen dass die Sequence gestoppt ist bevor wir sie starten
+        sequence.stop()
         sequence.start(0)
         const targetVolume = TRACK_VOLUMES[trackId]
         volume.volume.rampTo(targetVolume, 2)
@@ -328,39 +330,51 @@ function AmbientMusicGenerator() {
 
   const stopAudio = () => {
     console.log('Stopping audio...')
+
+    // Stoppe alle Sequences explizit
+    Object.values(sequencesRef.current).forEach(sequence => {
+      if (sequence) {
+        sequence.stop()
+      }
+    })
+
     Tone.Transport.stop()
     setIsPlaying(false)
     setTimelineProgress(0)
   }
 
-  const toggleTrack = (trackId) => {
+  const toggleTrack = useCallback((trackId) => {
     if (!isInitializedRef.current) return
 
-    const newActiveTracks = new Set(activeTracks)
-    const volume = volumesRef.current[trackId]
-    const sequence = sequencesRef.current[trackId]
+    setActiveTracks(prevActiveTracks => {
+      const newActiveTracks = new Set(prevActiveTracks)
+      const volume = volumesRef.current[trackId]
+      const sequence = sequencesRef.current[trackId]
 
-    if (newActiveTracks.has(trackId)) {
-      // Fade out - nahtlos ausmischen
-      newActiveTracks.delete(trackId)
-      volume.volume.rampTo(-60, 2) // 2 Sekunden Fade-out
-      setTimeout(() => {
-        sequence.stop()
-      }, 2000)
-    } else {
-      // Fade in - nahtlos einmischen
-      newActiveTracks.add(trackId)
+      if (newActiveTracks.has(trackId)) {
+        // Fade out - nahtlos ausmischen
+        newActiveTracks.delete(trackId)
+        volume.volume.rampTo(-60, 2) // 2 Sekunden Fade-out
+        setTimeout(() => {
+          sequence.stop()
+        }, 2000)
+      } else {
+        // Fade in - nahtlos einmischen
+        newActiveTracks.add(trackId)
 
-      if (Tone.Transport.state === 'started') {
-        sequence.start(0)
-        volume.volume.setValueAtTime(-60, Tone.now())
-        const targetVolume = TRACK_VOLUMES[trackId]
-        volume.volume.rampTo(targetVolume, 2) // 2 Sekunden Fade-in
+        if (Tone.Transport.state === 'started') {
+          // Sicherstellen dass die Sequence gestoppt ist bevor wir sie starten
+          sequence.stop()
+          sequence.start(0)
+          volume.volume.setValueAtTime(-60, Tone.now())
+          const targetVolume = TRACK_VOLUMES[trackId]
+          volume.volume.rampTo(targetVolume, 2) // 2 Sekunden Fade-in
+        }
       }
-    }
 
-    setActiveTracks(newActiveTracks)
-  }
+      return newActiveTracks
+    })
+  }, [])  // Keine Dependencies da wir nur Refs verwenden
 
   return (
     <div className="ambient-generator">
@@ -394,7 +408,12 @@ function AmbientMusicGenerator() {
 
       {/* Timeline */}
       <div className="timeline-container">
-        <div className="timeline-label">Timeline</div>
+        <div className="timeline-header">
+          <div className="timeline-label">Loop-Position (16 Takte)</div>
+          <div className="timeline-time">
+            {Math.floor(timelineProgress / 60)}:{String(Math.floor(timelineProgress % 60)).padStart(2, '0')}
+          </div>
+        </div>
         <div className="timeline">
           <div
             className="timeline-progress"
@@ -408,8 +427,8 @@ function AmbientMusicGenerator() {
             ))}
           </div>
         </div>
-        <div className="timeline-time">
-          {Math.floor(timelineProgress / 60)}:{String(Math.floor(timelineProgress % 60)).padStart(2, '0')}
+        <div className="timeline-description">
+          Die Timeline zeigt die Position innerhalb des 16-Takte musikalischen Loops. Alle Tracks sind perfekt synchronisiert.
         </div>
       </div>
 
@@ -440,9 +459,10 @@ function AmbientMusicGenerator() {
         <h3>✨ Features</h3>
         <ul>
           <li><strong>Nahtloses Mixing:</strong> Tracks werden smooth ein- und ausgeblendet (2s Crossfade)</li>
-          <li><strong>Auto Mode:</strong> Die Musik entwickelt sich automatisch weiter</li>
+          <li><strong>Auto Mode:</strong> Die Musik entwickelt sich automatisch weiter - Tracks werden alle 10-25 Sekunden zufällig hinzugefügt oder entfernt für eine sich ständig wandelnde Soundscape</li>
           <li><strong>Production Quality:</strong> Hochwertige Synthese mit Tone.js, keine MIDI-Sounds</li>
           <li><strong>Night Drive Vibes:</strong> Relaxte elektrische Sounds mit ordentlichem Bass und sanften Melodien</li>
+          <li><strong>Flexibles Playback:</strong> Tracks können jederzeit hinzugefügt/entfernt werden, auch während des Abspielens. Einfach Stop und Start drücken, um neu zu beginnen</li>
         </ul>
       </div>
     </div>
