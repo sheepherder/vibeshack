@@ -1,47 +1,38 @@
 import { useState, useEffect, useRef } from 'react'
 
-// Klangschalen-Sound Generator mit Web Audio API
-const playBowlSound = (audioContext) => {
+// Fallback: Synthetischer Klangschalen-Sound mit Web Audio API
+const playSyntheticBowlSound = (audioContext) => {
   if (!audioContext) return
 
   const now = audioContext.currentTime
   const duration = 3
 
-  // Haupt-Ton (fundamentale Frequenz)
-  const osc1 = audioContext.createOscillator()
-  const gain1 = audioContext.createGain()
-  osc1.type = 'sine'
-  osc1.frequency.setValueAtTime(432, now) // A (432 Hz)
-  gain1.gain.setValueAtTime(0.3, now)
-  gain1.gain.exponentialRampToValueAtTime(0.001, now + duration)
-  osc1.connect(gain1)
-  gain1.connect(audioContext.destination)
-  osc1.start(now)
-  osc1.stop(now + duration)
+  // Verbesserte Klangschale mit mehr Obertönen und realistischerer Envelope
+  const frequencies = [
+    { freq: 432, gain: 0.3, decay: 1.0 },      // Grundton
+    { freq: 864, gain: 0.15, decay: 0.8 },     // 1. Oberton
+    { freq: 1296, gain: 0.08, decay: 0.6 },    // 2. Oberton
+    { freq: 520, gain: 0.12, decay: 0.9 },     // Zusätzlicher Ton
+    { freq: 728, gain: 0.06, decay: 0.7 },     // Zusätzlicher Ton
+  ]
 
-  // Oberton 1
-  const osc2 = audioContext.createOscillator()
-  const gain2 = audioContext.createGain()
-  osc2.type = 'sine'
-  osc2.frequency.setValueAtTime(864, now) // 2x fundamental
-  gain2.gain.setValueAtTime(0.15, now)
-  gain2.gain.exponentialRampToValueAtTime(0.001, now + duration * 0.8)
-  osc2.connect(gain2)
-  gain2.connect(audioContext.destination)
-  osc2.start(now)
-  osc2.stop(now + duration)
+  frequencies.forEach(({ freq, gain: gainValue, decay }) => {
+    const osc = audioContext.createOscillator()
+    const gainNode = audioContext.createGain()
 
-  // Oberton 2
-  const osc3 = audioContext.createOscillator()
-  const gain3 = audioContext.createGain()
-  osc3.type = 'sine'
-  osc3.frequency.setValueAtTime(1296, now) // 3x fundamental
-  gain3.gain.setValueAtTime(0.08, now)
-  gain3.gain.exponentialRampToValueAtTime(0.001, now + duration * 0.6)
-  osc3.connect(gain3)
-  gain3.connect(audioContext.destination)
-  osc3.start(now)
-  osc3.stop(now + duration)
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(freq, now)
+
+    // Realistische Envelope mit schnellem Attack und langsamem Decay
+    gainNode.gain.setValueAtTime(0, now)
+    gainNode.gain.linearRampToValueAtTime(gainValue, now + 0.02) // Schneller Attack
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration * decay)
+
+    osc.connect(gainNode)
+    gainNode.connect(audioContext.destination)
+    osc.start(now)
+    osc.stop(now + duration)
+  })
 }
 
 const meditationTypes = [
@@ -200,17 +191,58 @@ function MeditationTimer() {
   const [isRunning, setIsRunning] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const audioContextRef = useRef(null)
+  const bowlAudioRef = useRef(null)
+  const [audioLoaded, setAudioLoaded] = useState(false)
   const intervalRef = useRef(null)
 
-  // Audio Context initialisieren
+  // Audio laden (Sample oder Fallback)
   useEffect(() => {
+    // Versuche, die Klangschalen-Audio-Datei zu laden
+    const audio = new Audio()
+    audio.preload = 'auto'
+
+    // Versuche, die Audio-Datei zu laden
+    audio.src = '/vibeshack/sounds/singing-bowl.mp3'
+
+    audio.addEventListener('canplaythrough', () => {
+      bowlAudioRef.current = audio
+      setAudioLoaded(true)
+      console.log('✅ Klangschalen-Sample erfolgreich geladen')
+    })
+
+    audio.addEventListener('error', () => {
+      console.log('ℹ️ Keine Audio-Datei gefunden - verwende synthetischen Fallback-Sound')
+      setAudioLoaded(false)
+    })
+
+    // Audio Context für Fallback initialisieren
     audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)()
+
     return () => {
       if (audioContextRef.current) {
         audioContextRef.current.close()
       }
+      if (bowlAudioRef.current) {
+        bowlAudioRef.current = null
+      }
     }
   }, [])
+
+  // Haupt-Funktion zum Abspielen des Klangschalen-Sounds
+  const playBowlSound = () => {
+    if (audioLoaded && bowlAudioRef.current) {
+      // Verwende echtes Sample
+      bowlAudioRef.current.currentTime = 0
+      bowlAudioRef.current.play().catch(err => {
+        console.log('Fehler beim Abspielen der Audio-Datei:', err)
+        // Fallback bei Fehler
+        playSyntheticBowlSound(audioContextRef.current)
+      })
+    } else {
+      // Verwende synthetischen Sound
+      playSyntheticBowlSound(audioContextRef.current)
+    }
+  }
 
   // Timer Logik
   useEffect(() => {
@@ -245,14 +277,14 @@ function MeditationTimer() {
   }, [selectedType, isRunning])
 
   const handleTimerEnd = () => {
-    playBowlSound(audioContextRef.current)
+    playBowlSound()
     setIsRunning(false)
     setIsPaused(false)
   }
 
   const startMeditation = () => {
     // Klangschale am Anfang
-    playBowlSound(audioContextRef.current)
+    playBowlSound()
     setTimeLeft(duration * 60)
     setIsRunning(true)
     setIsPaused(false)
