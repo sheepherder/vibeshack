@@ -616,6 +616,10 @@ nav a.active {
   position: relative;
   transition: background-color 0.2s;
   min-width: 200px;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .grid-cell-over {
@@ -633,6 +637,10 @@ nav a.active {
   transition: all 0.2s;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .session-block:hover {
@@ -658,6 +666,11 @@ nav a.active {
   color: rgba(255, 255, 255, 0.9);
   margin-bottom: 0.25rem;
   letter-spacing: 0.5px;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  pointer-events: none;
 }
 
 .session-block-title {
@@ -670,6 +683,11 @@ nav a.active {
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  pointer-events: none;
 }
 
 /* Responsive */
