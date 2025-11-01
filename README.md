@@ -9,7 +9,9 @@ Die App wird automatisch auf GitHub Pages deployed: [vibeshack](https://sheepher
 ## Experimente
 
 - **Taschenrechner** - Ein minimalistischer Taschenrechner mit modernem Design
-- Weitere Experimente folgen...
+- **Festival Planner** - Interaktives Tool zur Planung von Festival-Programmen mit Drag & Drop, Sessions-Verwaltung und CSV Import/Export
+- **Ambient Music Generator** - Generativer Ambient-Musik-Synthesizer mit mehreren Spuren (Deep Bass, Rhythmic Pulse, Cosmic Pad, Melodic Lead, Hi-Hats, Texture) und Auto-Modus
+- **Meditation Timer** - Meditations-Timer mit verschiedenen Meditationstypen (Metta/Liebende Güte) und Klangschalen-Sound
 
 ## Entwicklung
 
