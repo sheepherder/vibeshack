@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core'
 import { SortableContext, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { useLocalStorage } from '../hooks/useLocalStorage'
+import { timeToMinutes, calculateDurationInMinutes, addMinutes, generateTimeSlots } from '../utils/timeHelpers'
 
 // CSV Export Funktion
 const exportToCSV = (sessions, locations) => {
@@ -72,23 +74,6 @@ const importFromCSV = (csvText, locations) => {
   }
 
   return sessions
-}
-
-// Zeitslot Generator mit konfigurierbarem Intervall
-const generateTimeSlots = (intervalMinutes = 30) => {
-  const slots = []
-  const startHour = 7
-  const endHour = 18
-  const totalMinutes = (endHour - startHour) * 60
-
-  for (let minutes = 0; minutes <= totalMinutes; minutes += intervalMinutes) {
-    const hour = startHour + Math.floor(minutes / 60)
-    const minute = minutes % 60
-    if (hour <= endHour) {
-      slots.push(`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`)
-    }
-  }
-  return slots
 }
 
 // Grid Cell mit Droppable - Zeigt Sessions, die im Slot-Zeitfenster beginnen
@@ -189,12 +174,6 @@ function GridCell({ locationId, timeSlot, sessions, onEdit, onDelete, slotHeight
   )
 }
 
-// Hilfsfunktion: Konvertiere Zeit zu Minuten seit Mitternacht
-function timeToMinutes(time) {
-  const [h, m] = time.split(':').map(Number)
-  return h * 60 + m
-}
-
 // Draggable Session Block mit variabler Höhe basierend auf Dauer
 function SessionBlock({ session, onEdit, onDelete, slotHeightPx, zoomLevel, columnIndex = 0, totalColumns = 1, slotStartTime }) {
   const {
@@ -280,17 +259,7 @@ function SessionBlock({ session, onEdit, onDelete, slotHeightPx, zoomLevel, colu
   )
 }
 
-// Hilfsfunktion: Berechne Dauer in Minuten
-function calculateDurationInMinutes(start, end) {
-  if (!start || !end) return 60 // Fallback: 60 Minuten
-  const [startH, startM] = start.split(':').map(Number)
-  const [endH, endM] = end.split(':').map(Number)
-  const startMinutes = startH * 60 + startM
-  const endMinutes = endH * 60 + endM
-  return endMinutes - startMinutes
-}
-
-// Hilfsfunktion: Berechne Dauer in 30-Min-Slots
+// Hilfsfunktion: Berechne Dauer in 30-Min-Slots (legacy, falls noch benötigt)
 function calculateDuration(start, end) {
   if (!start || !end) return 2 // Fallback: 2 Slots = 1 Stunde
   const [startH, startM] = start.split(':').map(Number)
@@ -547,8 +516,9 @@ function LocationEditor({ location, onSave, onCancel }) {
 
 // Hauptkomponente
 function FestivalPlanner() {
-  const [sessions, setSessions] = useState([])
-  const [locations, setLocations] = useState([
+  // LocalStorage-synchronisierte State mit Custom Hook
+  const [sessions, setSessions] = useLocalStorage('festival-sessions-2026', [])
+  const [locations, setLocations] = useLocalStorage('festival-locations-2026', [
     { id: 'loc-1', name: 'Hauptbühne', color: '#6366f1' },
     { id: 'loc-2', name: 'Workshop-Raum 1', color: '#10b981' },
     { id: 'loc-3', name: 'Experience Area', color: '#f59e0b' },
@@ -582,20 +552,7 @@ function FestivalPlanner() {
   // Konstante Slot-Höhe unabhängig vom Zoom-Level
   const slotHeightPx = 60
 
-  // LocalStorage laden
-  useEffect(() => {
-    const savedSessions = localStorage.getItem('festival-sessions-2026')
-    const savedLocations = localStorage.getItem('festival-locations-2026')
-    if (savedSessions) setSessions(JSON.parse(savedSessions))
-    if (savedLocations) setLocations(JSON.parse(savedLocations))
-  }, [])
-
-  // LocalStorage speichern
-  useEffect(() => {
-    localStorage.setItem('festival-sessions-2026', JSON.stringify(sessions))
-    localStorage.setItem('festival-locations-2026', JSON.stringify(locations))
-  }, [sessions, locations])
-
+  // LocalStorage-Synchronisation erfolgt automatisch durch useLocalStorage Hook
   const daySessions = sessions.filter(s => s.day === activeDay)
 
   const handleDragStart = (event) => {
@@ -632,14 +589,6 @@ function FestivalPlanner() {
 
     setActiveId(null)
     setOverId(null)
-  }
-
-  const addMinutes = (time, minutes) => {
-    const [h, m] = time.split(':').map(Number)
-    const totalMinutes = h * 60 + m + minutes
-    const newH = Math.floor(totalMinutes / 60)
-    const newM = totalMinutes % 60
-    return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`
   }
 
   const handleSaveSession = (sessionData) => {
