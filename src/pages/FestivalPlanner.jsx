@@ -739,12 +739,24 @@ function FestivalPlanner() {
             </SortableContext>
 
             <DragOverlay>
-              {activeSession ? (
-                <div className="session-block dragging">
-                  <div className="session-block-time">{activeSession.startTime} - {activeSession.endTime}</div>
-                  <div className="session-block-title">{activeSession.title}</div>
-                </div>
-              ) : null}
+              {activeSession ? (() => {
+                const durationMinutes = calculateDurationInMinutes(activeSession.startTime, activeSession.endTime)
+                const height = (durationMinutes / 30) * slotHeightPx
+                return (
+                  <div
+                    className="session-block dragging"
+                    style={{
+                      height: `${height}px`,
+                      minHeight: `${height}px`,
+                      display: 'flex',
+                      flexDirection: 'column'
+                    }}
+                  >
+                    <div className="session-block-time">{activeSession.startTime} - {activeSession.endTime}</div>
+                    <div className="session-block-title">{activeSession.title}</div>
+                  </div>
+                )
+              })() : null}
             </DragOverlay>
           </DndContext>
         </div>
