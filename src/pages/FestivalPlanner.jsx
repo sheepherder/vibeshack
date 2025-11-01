@@ -701,27 +701,30 @@ function FestivalPlanner() {
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
             <span style={{ fontSize: '0.9rem', color: '#666' }}>Zoom:</span>
-            <button
-              onClick={() => setZoomLevel(60)}
-              className={zoomLevel === 60 ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
-              style={{ padding: '4px 8px', fontSize: '0.85rem' }}
-            >
-              1h
-            </button>
-            <button
-              onClick={() => setZoomLevel(30)}
-              className={zoomLevel === 30 ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
-              style={{ padding: '4px 8px', fontSize: '0.85rem' }}
-            >
-              30min
-            </button>
-            <button
-              onClick={() => setZoomLevel(15)}
-              className={zoomLevel === 15 ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
-              style={{ padding: '4px 8px', fontSize: '0.85rem' }}
-            >
-              15min
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '180px' }}>
+              <input
+                type="range"
+                min="0"
+                max="4"
+                step="1"
+                value={[5, 15, 30, 60, 120].indexOf(zoomLevel)}
+                onChange={(e) => {
+                  const levels = [5, 15, 30, 60, 120]
+                  setZoomLevel(levels[parseInt(e.target.value)])
+                }}
+                style={{
+                  width: '180px',
+                  cursor: 'pointer'
+                }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '180px', fontSize: '0.7rem', color: '#666', marginTop: '2px' }}>
+                <span>5min</span>
+                <span>15min</span>
+                <span>30min</span>
+                <span>1h</span>
+                <span>2h</span>
+              </div>
+            </div>
             <button onClick={() => setIsCreatingSession(true)} className="btn-primary" style={{ marginLeft: '1rem' }}>
               ➕ Session hinzufügen
             </button>
