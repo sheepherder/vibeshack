@@ -195,6 +195,10 @@ function SessionBlock({ session, onEdit, onDelete, slotHeightPx, zoomLevel }) {
         zIndex: 5
       }}
       className="session-block"
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        onEdit(session);
+      }}
     >
       <div
         {...attributes}
