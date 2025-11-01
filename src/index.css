@@ -181,11 +181,18 @@ nav a.active {
 .calculator-button.equals {
   background: #10b981;
   color: white;
-  grid-column: span 2;
 }
 
 .calculator-button.equals:hover {
   background: #059669;
+}
+
+.calculator-button.wide {
+  grid-column: span 2;
+}
+
+.calculator-button.tall {
+  grid-row: span 3;
 }
 
 /* Festival Planner Styles */
