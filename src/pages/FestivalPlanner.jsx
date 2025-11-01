@@ -538,9 +538,6 @@ function FestivalPlanner() {
           </p>
         </div>
         <div className="festival-actions">
-          <button onClick={() => setIsCreatingSession(true)} className="btn-primary">
-            ➕ Session hinzufügen
-          </button>
           <button onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')} className="btn-secondary">
             {viewMode === 'grid' ? '📋 Listen-Ansicht' : '📊 Grid-Ansicht'}
           </button>
@@ -600,7 +597,12 @@ function FestivalPlanner() {
       </div>
 
       <div className="festival-locations-bar">
-        <h3>Locations:</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h3 style={{ margin: 0 }}>Locations:</h3>
+          <button onClick={() => setIsCreatingSession(true)} className="btn-primary">
+            ➕ Session hinzufügen
+          </button>
+        </div>
         <div className="locations-list">
           {locations.map(loc => (
             <div key={loc.id} className="location-tag" style={{ borderLeft: `4px solid ${loc.color}` }}>
