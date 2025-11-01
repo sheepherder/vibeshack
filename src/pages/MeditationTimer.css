@@ -1,0 +1,379 @@
+.meditation-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.meditation-section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.meditation-section h2 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: var(--text);
+}
+
+.meditation-types {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.meditation-type-btn {
+  padding: 1rem;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.meditation-type-btn:hover:not(:disabled) {
+  border-color: var(--type-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.meditation-type-btn.active {
+  border-color: var(--type-color);
+  background: linear-gradient(135deg, var(--bg) 0%, var(--bg-secondary) 100%);
+  box-shadow: 0 0 20px var(--type-color);
+}
+
+.meditation-type-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.instruction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.instruction-header h2 {
+  margin: 0;
+}
+
+.detail-toggle {
+  display: flex;
+  gap: 0.5rem;
+  background: var(--bg);
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.detail-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.detail-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text);
+}
+
+.detail-btn.active {
+  background: var(--primary);
+  color: white;
+}
+
+.instruction-box {
+  background: var(--bg);
+  padding: 1.5rem;
+  border-radius: 8px;
+  border-left: 4px solid var(--primary);
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.instruction-box p {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.metta-phrases {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.phrase-group {
+  background: var(--bg-secondary);
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.phrase-group strong {
+  display: block;
+  color: var(--primary);
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.phrase-group ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  list-style: none;
+}
+
+.phrase-group li {
+  position: relative;
+  padding-left: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--text);
+}
+
+.phrase-group li:before {
+  content: "✨";
+  position: absolute;
+  left: -1.5rem;
+  opacity: 0.7;
+}
+
+.phrase-group li:last-child {
+  margin-bottom: 0;
+}
+
+.timer-setup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+
+.duration-control {
+  width: 100%;
+  max-width: 400px;
+}
+
+.duration-control label {
+  display: block;
+  margin-bottom: 1rem;
+  color: var(--text);
+  font-weight: 500;
+  text-align: center;
+}
+
+.duration-inputs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.duration-btn {
+  width: 50px;
+  height: 50px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.duration-btn:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.duration-input {
+  width: 100px;
+  height: 50px;
+  text-align: center;
+  font-size: 1.5rem;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  padding: 0.5rem;
+}
+
+.duration-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.recommended-time {
+  margin-top: 0.5rem;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.start-btn {
+  padding: 1rem 3rem;
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.start-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.timer-active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+
+.timer-display {
+  position: relative;
+}
+
+.time-circle {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-ring {
+  position: absolute;
+  transform: rotate(-90deg);
+}
+
+.progress-ring-bg {
+  fill: none;
+  stroke: var(--bg);
+  stroke-width: 12;
+}
+
+.progress-ring-progress {
+  fill: none;
+  stroke-width: 12;
+  stroke-dasharray: 754;
+  stroke-dashoffset: 754;
+  transition: stroke-dashoffset 1s linear;
+  stroke-linecap: round;
+}
+
+.time-text {
+  font-size: 3.5rem;
+  font-weight: 300;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-controls {
+  display: flex;
+  gap: 1rem;
+}
+
+.control-btn {
+  padding: 0.75rem 2rem;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.control-btn:hover {
+  transform: translateY(-2px);
+}
+
+.pause-btn:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.stop-btn:hover {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .meditation-section {
+    padding: 1.5rem;
+  }
+
+  .meditation-types {
+    grid-template-columns: 1fr;
+  }
+
+  .instruction-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .detail-toggle {
+    width: 100%;
+  }
+
+  .detail-btn {
+    flex: 1;
+  }
+
+  .metta-phrases {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .phrase-group {
+    padding: 0.75rem;
+  }
+
+  .time-circle {
+    width: 240px;
+    height: 240px;
+  }
+
+  .progress-ring {
+    width: 240px;
+    height: 240px;
+  }
+
+  .progress-ring-bg,
+  .progress-ring-progress {
+    r: 100;
+  }
+
+  .time-text {
+    font-size: 2.5rem;
+  }
+
+  .timer-controls {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .control-btn {
+    width: 100%;
+  }
+}

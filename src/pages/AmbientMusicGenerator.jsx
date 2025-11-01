@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import * as Tone from 'tone'
 import './AmbientMusicGenerator.css'
+import { TRACK_DEFINITIONS, TRACK_VOLUMES, BPM } from './audioConfig'
 
 function AmbientMusicGenerator() {
   const [isPlaying, setIsPlaying] = useState(false)
@@ -14,45 +15,8 @@ function AmbientMusicGenerator() {
   const isInitializedRef = useRef(false)
   const timelineIntervalRef = useRef(null)
 
-  // Track definitions - verschiedene Night Drive Styles
-  const tracks = [
-    {
-      id: 'deep-bass',
-      name: 'Deep Bass',
-      color: '#8b5cf6',
-      icon: '🔊'
-    },
-    {
-      id: 'kick-pulse',
-      name: 'Rhythmic Pulse',
-      color: '#ec4899',
-      icon: '🥁'
-    },
-    {
-      id: 'ambient-pad',
-      name: 'Cosmic Pad',
-      color: '#06b6d4',
-      icon: '🌌'
-    },
-    {
-      id: 'synth-lead',
-      name: 'Melodic Lead',
-      color: '#f59e0b',
-      icon: '🎹'
-    },
-    {
-      id: 'hats',
-      name: 'Hi-Hats',
-      color: '#10b981',
-      icon: '✨'
-    },
-    {
-      id: 'texture',
-      name: 'Ambient Texture',
-      color: '#6366f1',
-      icon: '🌊'
-    }
-  ]
+  // Track definitions werden aus audioConfig.js importiert
+  const tracks = TRACK_DEFINITIONS
 
   // Initialize Audio Engine - nur einmal beim ersten Start
   const initializeAudioEngine = () => {
@@ -250,7 +214,7 @@ function AmbientMusicGenerator() {
     sequencesRef.current['texture'] = texturePattern
 
     // Set BPM für relaxte Vibes
-    Tone.Transport.bpm.value = 82
+    Tone.Transport.bpm.value = BPM
 
     isInitializedRef.current = true
     console.log('Audio engine initialized!')
@@ -356,11 +320,7 @@ function AmbientMusicGenerator() {
       const volume = volumesRef.current[trackId]
       if (sequence && volume) {
         sequence.start(0)
-        const targetVolume = trackId === 'deep-bass' ? -8 :
-                           trackId === 'kick-pulse' ? -12 :
-                           trackId === 'ambient-pad' ? -18 :
-                           trackId === 'synth-lead' ? -20 :
-                           trackId === 'hats' ? -25 : -22
+        const targetVolume = TRACK_VOLUMES[trackId]
         volume.volume.rampTo(targetVolume, 2)
       }
     })
@@ -394,11 +354,7 @@ function AmbientMusicGenerator() {
       if (Tone.Transport.state === 'started') {
         sequence.start(0)
         volume.volume.setValueAtTime(-60, Tone.now())
-        const targetVolume = trackId === 'deep-bass' ? -8 :
-                           trackId === 'kick-pulse' ? -12 :
-                           trackId === 'ambient-pad' ? -18 :
-                           trackId === 'synth-lead' ? -20 :
-                           trackId === 'hats' ? -25 : -22
+        const targetVolume = TRACK_VOLUMES[trackId]
         volume.volume.rampTo(targetVolume, 2) // 2 Sekunden Fade-in
       }
     }
