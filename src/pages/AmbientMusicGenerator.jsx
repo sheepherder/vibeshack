@@ -11,6 +11,8 @@ function AmbientMusicGenerator() {
   const sequencesRef = useRef({})
   const volumesRef = useRef({})
   const autoModeTimerRef = useRef(null)
+  const isInitializedRef = useRef(false)
+  const timelineIntervalRef = useRef(null)
 
   // Track definitions - verschiedene Night Drive Styles
   const tracks = [
@@ -52,8 +54,12 @@ function AmbientMusicGenerator() {
     }
   ]
 
-  // Initialize Audio Engine
-  useEffect(() => {
+  // Initialize Audio Engine - nur einmal beim ersten Start
+  const initializeAudioEngine = () => {
+    if (isInitializedRef.current) return
+
+    console.log('Initializing audio engine...')
+
     // Deep Bass - sehr relaxed und tief
     const bassVol = new Tone.Volume(-8).toDestination()
     volumesRef.current['deep-bass'] = bassVol
@@ -246,24 +252,47 @@ function AmbientMusicGenerator() {
     // Set BPM für relaxte Vibes
     Tone.Transport.bpm.value = 82
 
-    // Timeline update
-    const interval = setInterval(() => {
-      if (Tone.Transport.state === 'started') {
-        const position = Tone.Transport.seconds
-        setTimelineProgress(position)
-      }
-    }, 50)
+    isInitializedRef.current = true
+    console.log('Audio engine initialized!')
+  }
 
+  // Cleanup bei Unmount
+  useEffect(() => {
     return () => {
-      clearInterval(interval)
-      Tone.Transport.stop()
-      Object.values(sequencesRef.current).forEach(seq => seq.dispose())
-      Object.values(synthsRef.current).forEach(synth => synth.dispose())
+      console.log('Cleaning up...')
+      if (timelineIntervalRef.current) {
+        clearInterval(timelineIntervalRef.current)
+      }
       if (autoModeTimerRef.current) {
         clearTimeout(autoModeTimerRef.current)
       }
+      Tone.Transport.stop()
+      Object.values(sequencesRef.current).forEach(seq => seq?.dispose())
+      Object.values(synthsRef.current).forEach(synth => synth?.dispose())
     }
   }, [])
+
+  // Timeline update
+  useEffect(() => {
+    if (isPlaying) {
+      timelineIntervalRef.current = setInterval(() => {
+        if (Tone.Transport.state === 'started') {
+          const position = Tone.Transport.seconds
+          setTimelineProgress(position)
+        }
+      }, 50)
+    } else {
+      if (timelineIntervalRef.current) {
+        clearInterval(timelineIntervalRef.current)
+      }
+    }
+
+    return () => {
+      if (timelineIntervalRef.current) {
+        clearInterval(timelineIntervalRef.current)
+      }
+    }
+  }, [isPlaying])
 
   // Auto Mode - automatische Track-Änderungen
   useEffect(() => {
@@ -308,18 +337,45 @@ function AmbientMusicGenerator() {
   }, [autoMode, isPlaying, activeTracks])
 
   const startAudio = async () => {
+    console.log('Starting audio...')
+
+    // WICHTIG: Erst Tone.start() nach User-Interaktion
     await Tone.start()
+    console.log('Tone.js started, AudioContext state:', Tone.context.state)
+
+    // Audio Engine initialisieren (nur beim ersten Mal)
+    initializeAudioEngine()
+
+    // Transport starten
     Tone.Transport.start()
     setIsPlaying(true)
+
+    // Starte alle aktiven Tracks
+    activeTracks.forEach(trackId => {
+      const sequence = sequencesRef.current[trackId]
+      const volume = volumesRef.current[trackId]
+      if (sequence && volume) {
+        sequence.start(0)
+        const targetVolume = trackId === 'deep-bass' ? -8 :
+                           trackId === 'kick-pulse' ? -12 :
+                           trackId === 'ambient-pad' ? -18 :
+                           trackId === 'synth-lead' ? -20 :
+                           trackId === 'hats' ? -25 : -22
+        volume.volume.rampTo(targetVolume, 2)
+      }
+    })
   }
 
   const stopAudio = () => {
+    console.log('Stopping audio...')
     Tone.Transport.stop()
     setIsPlaying(false)
     setTimelineProgress(0)
   }
 
   const toggleTrack = (trackId) => {
+    if (!isInitializedRef.current) return
+
     const newActiveTracks = new Set(activeTracks)
     const volume = volumesRef.current[trackId]
     const sequence = sequencesRef.current[trackId]
@@ -349,24 +405,6 @@ function AmbientMusicGenerator() {
 
     setActiveTracks(newActiveTracks)
   }
-
-  // Starte alle aktiven Tracks beim Play
-  useEffect(() => {
-    if (isPlaying) {
-      activeTracks.forEach(trackId => {
-        const sequence = sequencesRef.current[trackId]
-        const volume = volumesRef.current[trackId]
-        sequence.start(0)
-
-        const targetVolume = trackId === 'deep-bass' ? -8 :
-                           trackId === 'kick-pulse' ? -12 :
-                           trackId === 'ambient-pad' ? -18 :
-                           trackId === 'synth-lead' ? -20 :
-                           trackId === 'hats' ? -25 : -22
-        volume.volume.rampTo(targetVolume, 2)
-      })
-    }
-  }, [isPlaying])
 
   return (
     <div className="ambient-generator">
