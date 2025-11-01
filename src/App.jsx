@@ -24,6 +24,7 @@ function Navigation() {
           </Link>
           <Link to="/ambient-music" className={location.pathname === '/ambient-music' ? 'active' : ''}>
             Ambient Music
+          </Link>
           <Link to="/meditation-timer" className={location.pathname === '/meditation-timer' ? 'active' : ''}>
             Meditation
           </Link>
