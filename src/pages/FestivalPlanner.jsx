@@ -302,11 +302,15 @@ function calculateDuration(start, end) {
 
 // Session Editor Modal
 function SessionEditor({ session, onSave, onCancel, day, locations }) {
+  // Berechne initiale Dauer aus bestehender Session
+  const initialDuration = session
+    ? calculateDurationInMinutes(session.startTime, session.endTime)
+    : 60
+
   const [formData, setFormData] = useState(
     session || {
       day: day,
       startTime: '10:00',
-      endTime: '11:00',
       title: '',
       description: '',
       locationId: locations[0]?.id || '',
@@ -317,10 +321,51 @@ function SessionEditor({ session, onSave, onCancel, day, locations }) {
     }
   )
 
+  const [duration, setDuration] = useState(initialDuration)
+
+  // Generiere Zeitoptionen in 5-Minuten-Schritten von 7:00 bis 18:00
+  const timeOptions = []
+  for (let hour = 7; hour <= 18; hour++) {
+    for (let minute = 0; minute < 60; minute += 5) {
+      if (hour === 18 && minute > 0) break // Stopp bei 18:00
+      const time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+      timeOptions.push(time)
+    }
+  }
+
+  // Dauer-Optionen
+  const durationOptions = [
+    { value: 5, label: '5 Minuten' },
+    { value: 10, label: '10 Minuten' },
+    { value: 15, label: '15 Minuten' },
+    { value: 20, label: '20 Minuten' },
+    { value: 30, label: '30 Minuten' },
+    { value: 45, label: '45 Minuten' },
+    { value: 60, label: '1 Stunde' },
+    { value: 75, label: '1h 15min' },
+    { value: 90, label: '1h 30min' },
+    { value: 105, label: '1h 45min' },
+    { value: 120, label: '2 Stunden' },
+    { value: 150, label: '2h 30min' },
+    { value: 180, label: '3 Stunden' },
+    { value: 240, label: '4 Stunden' },
+  ]
+
+  // Berechne Endzeit aus Startzeit und Dauer
+  const calculateEndTime = (startTime, durationMinutes) => {
+    const [h, m] = startTime.split(':').map(Number)
+    const totalMinutes = h * 60 + m + durationMinutes
+    const endH = Math.floor(totalMinutes / 60)
+    const endM = totalMinutes % 60
+    return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault()
+    const endTime = calculateEndTime(formData.startTime, duration)
     onSave({
       ...formData,
+      endTime,
       id: session?.id || `session-${Date.now()}`
     })
   }
@@ -344,21 +389,32 @@ function SessionEditor({ session, onSave, onCancel, day, locations }) {
           <div className="form-row">
             <div className="form-group">
               <label>Startzeit *</label>
-              <input
-                type="time"
+              <select
                 value={formData.startTime}
                 onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
                 required
-              />
+                style={{ fontSize: '0.95rem' }}
+              >
+                {timeOptions.map(time => (
+                  <option key={time} value={time}>{time} Uhr</option>
+                ))}
+              </select>
             </div>
             <div className="form-group">
-              <label>Endzeit *</label>
-              <input
-                type="time"
-                value={formData.endTime}
-                onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+              <label>Dauer *</label>
+              <select
+                value={duration}
+                onChange={(e) => setDuration(parseInt(e.target.value))}
                 required
-              />
+                style={{ fontSize: '0.95rem' }}
+              >
+                {durationOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+              <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '0.25rem' }}>
+                Endet um: {calculateEndTime(formData.startTime, duration)} Uhr
+              </div>
             </div>
           </div>
 
