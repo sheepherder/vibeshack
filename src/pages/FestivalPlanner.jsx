@@ -182,6 +182,7 @@ function GridCell({ locationId, timeSlot, sessions, onEdit, onDelete, slotHeight
           zoomLevel={zoomLevel}
           columnIndex={columnIndex}
           totalColumns={totalColumns}
+          slotStartTime={timeSlot}
         />
       ))}
     </div>
@@ -195,7 +196,7 @@ function timeToMinutes(time) {
 }
 
 // Draggable Session Block mit variabler Höhe basierend auf Dauer
-function SessionBlock({ session, onEdit, onDelete, slotHeightPx, zoomLevel, columnIndex = 0, totalColumns = 1 }) {
+function SessionBlock({ session, onEdit, onDelete, slotHeightPx, zoomLevel, columnIndex = 0, totalColumns = 1, slotStartTime }) {
   const {
     attributes,
     listeners,
@@ -219,6 +220,12 @@ function SessionBlock({ session, onEdit, onDelete, slotHeightPx, zoomLevel, colu
   const widthPercent = 100 / totalColumns
   const leftPercent = widthPercent * columnIndex
 
+  // Berechne vertikalen Offset innerhalb des Slots
+  const slotStartMinutes = timeToMinutes(slotStartTime)
+  const sessionStartMinutes = timeToMinutes(session.startTime)
+  const offsetMinutes = sessionStartMinutes - slotStartMinutes
+  const topOffset = (offsetMinutes / zoomLevel) * slotHeightPx
+
   return (
     <div
       ref={setNodeRef}
@@ -229,7 +236,7 @@ function SessionBlock({ session, onEdit, onDelete, slotHeightPx, zoomLevel, colu
         display: 'flex',
         flexDirection: 'column',
         position: 'absolute',
-        top: 0,
+        top: `${topOffset}px`,
         left: `${leftPercent}%`,
         width: `${widthPercent}%`,
         zIndex: 5
