@@ -590,9 +590,6 @@ function FestivalPlanner() {
       <div className="festival-header">
         <div>
           <h1 className="page-title">Festival der Zukunft 2026 📅</h1>
-          <p className="page-subtitle">
-            Grid-Programmplanung - Locations horizontal, Zeit vertikal
-          </p>
         </div>
         <div className="festival-actions">
           <button onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')} className="btn-secondary">
