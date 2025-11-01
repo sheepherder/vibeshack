@@ -91,18 +91,52 @@ const generateTimeSlots = (intervalMinutes = 30) => {
   return slots
 }
 
-// Grid Cell mit Droppable - Zeigt nur Sessions, die in diesem Slot beginnen
+// Grid Cell mit Droppable - Zeigt Sessions, die im Slot-Zeitfenster beginnen
 function GridCell({ locationId, timeSlot, sessions, onEdit, onDelete, slotHeightPx, activeSession, overId, timeSlots, zoomLevel }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `cell-${locationId}-${timeSlot}`,
     data: { locationId, timeSlot }
   })
 
-  // Nur Sessions anzeigen, die in diesem exakten Zeitslot beginnen
-  const cellSessions = sessions.filter(s =>
-    s.locationId === locationId &&
-    s.startTime === timeSlot
-  )
+  // Sessions anzeigen, die im Zeitfenster dieses Slots beginnen
+  // Z.B. bei 30-Min-Zoom zeigt Slot "10:00" alle Sessions zwischen 10:00 und 10:29:59
+  const slotStartMinutes = timeToMinutes(timeSlot)
+  const slotEndMinutes = slotStartMinutes + zoomLevel
+
+  const cellSessions = sessions.filter(s => {
+    if (s.locationId !== locationId) return false
+    const sessionStartMinutes = timeToMinutes(s.startTime)
+    return sessionStartMinutes >= slotStartMinutes && sessionStartMinutes < slotEndMinutes
+  })
+
+  // Berechne Spalten für parallele Events
+  // Finde alle Sessions, die sich zeitlich überschneiden
+  const sessionsWithColumns = cellSessions.map(session => {
+    const sessionStart = timeToMinutes(session.startTime)
+    const sessionEnd = timeToMinutes(session.endTime)
+
+    // Finde überlappende Sessions an dieser Location
+    const overlapping = sessions.filter(s => {
+      if (s.locationId !== locationId) return false
+      const sStart = timeToMinutes(s.startTime)
+      const sEnd = timeToMinutes(s.endTime)
+      // Prüfe auf zeitliche Überschneidung
+      return sStart < sessionEnd && sEnd > sessionStart
+    })
+
+    // Sortiere nach Startzeit, dann nach ID für konsistente Reihenfolge
+    overlapping.sort((a, b) => {
+      const aStart = timeToMinutes(a.startTime)
+      const bStart = timeToMinutes(b.startTime)
+      if (aStart !== bStart) return aStart - bStart
+      return a.id.localeCompare(b.id)
+    })
+
+    const totalColumns = overlapping.length
+    const columnIndex = overlapping.findIndex(s => s.id === session.id)
+
+    return { session, columnIndex, totalColumns }
+  })
 
   // Prüfen, ob diese Zelle gehighlightet werden sollte
   let shouldHighlight = isOver
@@ -138,7 +172,7 @@ function GridCell({ locationId, timeSlot, sessions, onEdit, onDelete, slotHeight
         position: 'relative'
       }}
     >
-      {cellSessions.map(session => (
+      {sessionsWithColumns.map(({ session, columnIndex, totalColumns }) => (
         <SessionBlock
           key={session.id}
           session={session}
@@ -146,6 +180,8 @@ function GridCell({ locationId, timeSlot, sessions, onEdit, onDelete, slotHeight
           onDelete={onDelete}
           slotHeightPx={slotHeightPx}
           zoomLevel={zoomLevel}
+          columnIndex={columnIndex}
+          totalColumns={totalColumns}
         />
       ))}
     </div>
@@ -159,7 +195,7 @@ function timeToMinutes(time) {
 }
 
 // Draggable Session Block mit variabler Höhe basierend auf Dauer
-function SessionBlock({ session, onEdit, onDelete, slotHeightPx, zoomLevel }) {
+function SessionBlock({ session, onEdit, onDelete, slotHeightPx, zoomLevel, columnIndex = 0, totalColumns = 1 }) {
   const {
     attributes,
     listeners,
@@ -179,6 +215,10 @@ function SessionBlock({ session, onEdit, onDelete, slotHeightPx, zoomLevel }) {
   const durationMinutes = calculateDurationInMinutes(session.startTime, session.endTime)
   const height = (durationMinutes / zoomLevel) * slotHeightPx // Höhe = Anzahl Slots * Slot-Höhe
 
+  // Berechne horizontale Position für parallele Events
+  const widthPercent = 100 / totalColumns
+  const leftPercent = widthPercent * columnIndex
+
   return (
     <div
       ref={setNodeRef}
@@ -190,8 +230,8 @@ function SessionBlock({ session, onEdit, onDelete, slotHeightPx, zoomLevel }) {
         flexDirection: 'column',
         position: 'absolute',
         top: 0,
-        left: 0,
-        right: 0,
+        left: `${leftPercent}%`,
+        width: `${widthPercent}%`,
         zIndex: 5
       }}
       className="session-block"
