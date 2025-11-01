@@ -344,6 +344,89 @@ function FestivalPlanner() {
         </div>
       )}
 
+      {/* List View */}
+      {viewMode === 'list' && (
+        <div className="festival-list-container">
+          <div className="festival-list">
+            {daySessions.length === 0 ? (
+              <div style={{
+                padding: '4rem',
+                textAlign: 'center',
+                color: '#666',
+                fontSize: '1.1rem'
+              }}>
+                Keine Sessions für {days.find(d => d.number === activeDay)?.name} gefunden.
+                <br />
+                <button
+                  onClick={() => setIsCreatingSession(true)}
+                  className="btn-primary"
+                  style={{ marginTop: '1rem' }}
+                >
+                  ➕ Erste Session hinzufügen
+                </button>
+              </div>
+            ) : (
+              [...daySessions]
+                .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                .map(session => {
+                  const location = locations.find(l => l.id === session.locationId)
+                  const duration = calculateDurationInMinutes(session.startTime, session.endTime)
+
+                  return (
+                    <div
+                      key={session.id}
+                      className="list-session-card"
+                      style={{ borderLeft: `4px solid ${location?.color || '#ccc'}` }}
+                    >
+                      <div className="list-session-header">
+                        <div className="list-session-time">
+                          <span className="list-time-main">{session.startTime} - {session.endTime}</span>
+                          <span className="list-time-duration">({duration} min)</span>
+                        </div>
+                        <div className="list-session-actions">
+                          <button
+                            onClick={() => setEditingSession(session)}
+                            className="btn-icon"
+                            title="Session bearbeiten"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSession(session.id)}
+                            className="btn-icon"
+                            title="Session löschen"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+                      <div className="list-session-title">{session.title}</div>
+                      {session.description && (
+                        <div className="list-session-description">{session.description}</div>
+                      )}
+                      <div className="list-session-footer">
+                        <div
+                          className="list-session-location"
+                          style={{
+                            background: location?.color || '#ccc',
+                            color: 'white',
+                            padding: '0.25rem 0.75rem',
+                            borderRadius: '12px',
+                            fontSize: '0.85rem',
+                            fontWeight: '500'
+                          }}
+                        >
+                          📍 {location?.name || 'Unbekannte Location'}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Modals */}
       {(isCreatingSession || editingSession) && (
         <SessionEditor
