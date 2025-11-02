@@ -80,6 +80,7 @@ function AmbientSoundscape() {
   const [volumes, setVolumes] = useState(createInitialVolumes)
   const [patterns, setPatterns] = useState(createInitialPatterns)
   const [currentStep, setCurrentStep] = useState(-1)
+  const [playheadProgress, setPlayheadProgress] = useState(0)
 
   const instrumentRefs = useRef({})
   const scheduleIdRef = useRef(null)
@@ -87,6 +88,13 @@ function AmbientSoundscape() {
   const patternRef = useRef(patterns)
   const isPaintingRef = useRef(false)
   const paintValueRef = useRef(false)
+  const animationFrameRef = useRef(null)
+  const lastProgressRef = useRef(0)
+  const sequencerRef = useRef(null)
+  const playheadGeometryRef = useRef({ offset: 0, width: 0 })
+  const [playheadGeometry, setPlayheadGeometry] = useState({ offset: 0, width: 0 })
+
+  const loopTicksRef = useRef(Tone.Time('16n').toTicks() * STEPS)
 
   const isInitialized = useRef(false)
 
@@ -128,6 +136,11 @@ function AmbientSoundscape() {
         scheduleIdRef.current = null
       }
 
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+        animationFrameRef.current = null
+      }
+
       INSTRUMENT_KEYS.forEach((key) => {
         if (instrumentRefs.current[key]) {
           instrumentRefs.current[key].dispose()
@@ -151,12 +164,58 @@ function AmbientSoundscape() {
     Tone.getTransport().bpm.value = bpm
   }, [bpm])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!sequencerRef.current) return
+
+    const sequencerElement = sequencerRef.current
+    const stepsElement = sequencerElement.querySelector('.sequencer-steps')
+    if (!stepsElement) return
+
+    const updateGeometry = () => {
+      const sequencerRect = sequencerElement.getBoundingClientRect()
+      const stepsRect = stepsElement.getBoundingClientRect()
+
+      const offset = stepsRect.left - sequencerRect.left
+      const width = stepsRect.width
+      const previous = playheadGeometryRef.current
+
+      if (Math.abs(previous.offset - offset) > 0.5 || Math.abs(previous.width - width) > 0.5) {
+        playheadGeometryRef.current = { offset, width }
+        setPlayheadGeometry({ offset, width })
+      }
+    }
+
+    updateGeometry()
+
+    const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updateGeometry) : null
+    if (resizeObserver) {
+      resizeObserver.observe(stepsElement)
+    }
+
+    window.addEventListener('resize', updateGeometry)
+
+    return () => {
+      if (resizeObserver) {
+        resizeObserver.disconnect()
+      }
+      window.removeEventListener('resize', updateGeometry)
+    }
+  }, [])
+
   const startLoop = async () => {
     await Tone.start()
+
+    if (scheduleIdRef.current !== null) {
+      Tone.getTransport().clear(scheduleIdRef.current)
+      scheduleIdRef.current = null
+    }
 
     Tone.getTransport().position = 0
     stepRef.current = 0
     setCurrentStep(0)
+    setPlayheadProgress(0)
+    lastProgressRef.current = 0
 
     if (!scheduleIdRef.current) {
       scheduleIdRef.current = Tone.getTransport().scheduleRepeat((time) => {
@@ -187,8 +246,18 @@ function AmbientSoundscape() {
     Tone.getTransport().stop()
     Tone.getTransport().position = 0
     stepRef.current = 0
+    if (scheduleIdRef.current !== null) {
+      Tone.getTransport().clear(scheduleIdRef.current)
+      scheduleIdRef.current = null
+    }
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current)
+      animationFrameRef.current = null
+    }
     setIsPlaying(false)
     setCurrentStep(-1)
+    setPlayheadProgress(0)
+    lastProgressRef.current = 0
   }
 
   const handlePlayPause = () => {
@@ -250,10 +319,48 @@ function AmbientSoundscape() {
     setStepValue(instrument, index, targetValue)
   }
 
+  useEffect(() => {
+    if (!isPlaying) return
+
+    const updateProgress = () => {
+      const ticks = Tone.getTransport().ticks
+      const loopTicks = loopTicksRef.current
+      if (loopTicks === 0) {
+        if (lastProgressRef.current !== 0) {
+          lastProgressRef.current = 0
+          setPlayheadProgress(0)
+        }
+      } else {
+        const fraction = (ticks % loopTicks) / loopTicks
+        if (Math.abs(fraction - lastProgressRef.current) > 0.001) {
+          lastProgressRef.current = fraction
+          setPlayheadProgress(fraction)
+        }
+      }
+      animationFrameRef.current = requestAnimationFrame(updateProgress)
+    }
+
+    animationFrameRef.current = requestAnimationFrame(updateProgress)
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+        animationFrameRef.current = null
+      }
+    }
+  }, [isPlaying])
+
+  const stepCenterOffset = 1 / (STEPS * 2)
+  const travelRange = Math.max(0, 1 - stepCenterOffset * 2)
+  const playheadOffset = isPlaying
+    ? stepCenterOffset + Math.min(playheadProgress, 1) * travelRange
+    : stepCenterOffset
+
   const playheadStyle = {
-    '--step-fraction': currentStep >= 0 ? (currentStep + 0.5) / STEPS : 0,
-    '--playhead-opacity': isPlaying && currentStep >= 0 ? 1 : 0,
-    '--step-duration': `${(60 / (bpm * 4)).toFixed(4)}s`
+    '--playhead-progress': playheadOffset,
+    '--playhead-opacity': isPlaying ? 1 : 0,
+    '--playhead-offset': `${playheadGeometry.offset}px`,
+    '--playhead-width': `${playheadGeometry.width}px`
   }
 
   return (
@@ -290,12 +397,12 @@ function AmbientSoundscape() {
           <h3>Step Sequencer</h3>
           <p>Schalte Schritte ein oder aus und forme dein eigenes Pattern.</p>
         </div>
-        <div className="sequencer" style={playheadStyle}>
+        <div ref={sequencerRef} className="sequencer" style={playheadStyle}>
           <div className="sequencer-playhead" aria-hidden="true" />
           {INSTRUMENT_KEYS.map((instrument) => (
             <div key={instrument} className="sequencer-row">
-              <div className="sequencer-label">{INSTRUMENT_CONFIG[instrument].label}</div>
-              <div className="sequencer-volume">
+              <div className="sequencer-label">
+                <span>{INSTRUMENT_CONFIG[instrument].label}</span>
                 <input
                   type="range"
                   min="-40"
@@ -303,7 +410,6 @@ function AmbientSoundscape() {
                   step="1"
                   value={volumes[instrument]}
                   onChange={(e) => handleVolumeChange(instrument, e.target.value)}
-                  orient="vertical"
                   aria-label={`${INSTRUMENT_CONFIG[instrument].label} volume`}
                 />
                 <span className="volume-value">{volumes[instrument]} dB</span>
