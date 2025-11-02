@@ -26,27 +26,29 @@ function AmbientSoundscape() {
 
   const isInitialized = useRef(false)
 
-  // Initialize Tone.js instruments
+  // Initialize Tone.js instruments and sequences
   useEffect(() => {
     if (isInitialized.current) return
     isInitialized.current = true
 
     // Kick drum - deep bass
-    kickRef.current = new Tone.MembraneSynth({
+    const kick = new Tone.MembraneSynth({
       pitchDecay: 0.05,
       octaves: 4,
       oscillator: { type: 'sine' },
       envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 1.4 }
     }).toDestination()
+    kickRef.current = kick
 
     // Snare - with noise
-    snareRef.current = new Tone.NoiseSynth({
+    const snare = new Tone.NoiseSynth({
       noise: { type: 'white' },
       envelope: { attack: 0.001, decay: 0.2, sustain: 0 }
     }).toDestination()
+    snareRef.current = snare
 
     // Hi-hat - short metallic sound
-    hihatRef.current = new Tone.MetalSynth({
+    const hihat = new Tone.MetalSynth({
       frequency: 200,
       envelope: { attack: 0.001, decay: 0.1, release: 0.05 },
       harmonicity: 5.1,
@@ -54,14 +56,56 @@ function AmbientSoundscape() {
       resonance: 4000,
       octaves: 1.5
     }).toDestination()
+    hihatRef.current = hihat
 
     // Percussion - rim shot / click
-    percRef.current = new Tone.MembraneSynth({
+    const perc = new Tone.MembraneSynth({
       pitchDecay: 0.008,
       octaves: 2,
       oscillator: { type: 'square' },
       envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 }
     }).toDestination()
+    percRef.current = perc
+
+    // Define patterns (null = rest, note = hit)
+    // Pattern is 16 16th notes (one bar in 4/4)
+    const kickPattern = ['C1', null, null, null, null, null, null, null, 'C1', null, null, null, null, null, null, null]
+    const snarePattern = [null, null, null, null, 'C1', null, null, null, null, null, null, null, 'C1', null, null, null]
+    const hihatPattern = ['C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null]
+    const percPattern = [null, 'G4', null, null, null, 'G4', null, null, null, 'G4', null, null, null, null, null, null]
+
+    // Create sequences once at initialization
+    kickSeqRef.current = new Tone.Sequence(
+      (time, note) => {
+        if (note) kick.triggerAttackRelease(note, '8n', time)
+      },
+      kickPattern,
+      '16n'
+    ).start(0)
+
+    snareSeqRef.current = new Tone.Sequence(
+      (time, note) => {
+        if (note) snare.triggerAttackRelease('8n', time)
+      },
+      snarePattern,
+      '16n'
+    ).start(0)
+
+    hihatSeqRef.current = new Tone.Sequence(
+      (time, note) => {
+        if (note) hihat.triggerAttackRelease('32n', time)
+      },
+      hihatPattern,
+      '16n'
+    ).start(0)
+
+    percSeqRef.current = new Tone.Sequence(
+      (time, note) => {
+        if (note) perc.triggerAttackRelease(note, '16n', time)
+      },
+      percPattern,
+      '16n'
+    ).start(0)
 
     // Set BPM
     Tone.getTransport().bpm.value = bpm
@@ -97,83 +141,17 @@ function AmbientSoundscape() {
   }, [bpm])
 
   const startLoop = async () => {
+    // Initialize audio context on user interaction
     await Tone.start()
 
-    // Define patterns (null = rest, note = hit)
-    // Pattern is 16 16th notes (one bar in 4/4)
-    const kickPattern = ['C1', null, null, null, null, null, null, null, 'C1', null, null, null, null, null, null, null]
-    const snarePattern = [null, null, null, null, 'C1', null, null, null, null, null, null, null, 'C1', null, null, null]
-    const hihatPattern = ['C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null]
-    const percPattern = [null, 'G4', null, null, null, 'G4', null, null, null, 'G4', null, null, null, null, null, null]
-
-    // Create sequences
-    kickSeqRef.current = new Tone.Sequence(
-      (time, note) => {
-        if (note) kickRef.current?.triggerAttackRelease(note, '8n', time)
-      },
-      kickPattern,
-      '16n'
-    )
-
-    snareSeqRef.current = new Tone.Sequence(
-      (time, note) => {
-        if (note) snareRef.current?.triggerAttackRelease('8n', time)
-      },
-      snarePattern,
-      '16n'
-    )
-
-    hihatSeqRef.current = new Tone.Sequence(
-      (time, note) => {
-        if (note) hihatRef.current?.triggerAttackRelease('32n', time)
-      },
-      hihatPattern,
-      '16n'
-    )
-
-    percSeqRef.current = new Tone.Sequence(
-      (time, note) => {
-        if (note) percRef.current?.triggerAttackRelease(note, '16n', time)
-      },
-      percPattern,
-      '16n'
-    )
-
-    // Start all sequences
-    kickSeqRef.current.start(0)
-    snareSeqRef.current.start(0)
-    hihatSeqRef.current.start(0)
-    percSeqRef.current.start(0)
-
+    // Start transport (sequences are already scheduled)
     Tone.getTransport().start()
     setIsPlaying(true)
   }
 
   const stopLoop = () => {
+    // Stop transport (sequences keep running but won't trigger)
     Tone.getTransport().stop()
-
-    // Dispose sequences
-    if (kickSeqRef.current) {
-      kickSeqRef.current.stop()
-      kickSeqRef.current.dispose()
-      kickSeqRef.current = null
-    }
-    if (snareSeqRef.current) {
-      snareSeqRef.current.stop()
-      snareSeqRef.current.dispose()
-      snareSeqRef.current = null
-    }
-    if (hihatSeqRef.current) {
-      hihatSeqRef.current.stop()
-      hihatSeqRef.current.dispose()
-      hihatSeqRef.current = null
-    }
-    if (percSeqRef.current) {
-      percSeqRef.current.stop()
-      percSeqRef.current.dispose()
-      percSeqRef.current = null
-    }
-
     setIsPlaying(false)
   }
 
