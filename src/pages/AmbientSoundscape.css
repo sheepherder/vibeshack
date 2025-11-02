@@ -155,43 +155,105 @@
   font-family: monospace;
 }
 
-.info-section {
+.sequencer-section {
   background: var(--bg-secondary);
   border-radius: 12px;
   padding: 2rem;
 }
 
-.info-section h3 {
-  margin-bottom: 1.5rem;
-  color: var(--text);
-}
-
-.pattern-display {
+.section-header {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  font-family: monospace;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
 }
 
-.pattern-row {
-  display: flex;
+.section-header h3 {
+  color: var(--text);
+}
+
+.section-header p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.sequencer {
+  --label-width: 90px;
+  position: relative;
+  padding: 0.5rem 0;
+}
+
+.sequencer-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--primary);
+  opacity: var(--playhead-opacity, 0);
+  transition: opacity 0.2s ease;
+  left: calc(var(--label-width) + var(--step-fraction, 0) * (100% - var(--label-width)) - 1px);
+  pointer-events: none;
+}
+
+.sequencer-row {
+  display: grid;
+  grid-template-columns: var(--label-width) 1fr;
   align-items: center;
-  gap: 1rem;
-  padding: 0.75rem;
-  background: var(--bg);
-  border-radius: 6px;
+  gap: 1.25rem;
+  padding: 0.6rem 0;
 }
 
-.pattern-label {
+.sequencer-row + .sequencer-row {
+  border-top: 1px solid var(--border);
+}
+
+.sequencer-label {
   font-weight: 600;
   color: var(--primary);
-  min-width: 80px;
 }
 
-.pattern-beats {
-  font-size: 1.5rem;
-  letter-spacing: 0.5rem;
-  color: var(--text);
+.sequencer-steps {
+  display: grid;
+  grid-template-columns: repeat(16, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.sequencer-step {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: none;
+  border-radius: 6px;
+  background: var(--bg);
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.sequencer-step.accent {
+  background: var(--bg-secondary);
+}
+
+.sequencer-step:hover {
+  transform: translateY(-1px);
+}
+
+.sequencer-step.active {
+  background: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary-dark);
+}
+
+.sequencer-step.current {
+  box-shadow: 0 0 0 2px var(--primary), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
+.sequencer-step.active.current {
+  box-shadow: 0 0 0 2px var(--primary), inset 0 0 0 1px rgba(255, 255, 255, 0.9);
+}
+
+.sequencer-step:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 @media (max-width: 768px) {
@@ -210,5 +272,13 @@
 
   .volume-control input[type="range"] {
     height: 100px;
+  }
+
+  .sequencer {
+    --label-width: 70px;
+  }
+
+  .sequencer-steps {
+    gap: 0.25rem;
   }
 }
