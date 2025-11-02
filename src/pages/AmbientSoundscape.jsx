@@ -4,6 +4,8 @@ import './AmbientSoundscape.css'
 
 const STEPS = 16
 const DEFAULT_BPM = 90
+const PIANO_ROLL_ROWS = 16 // Number of notes in piano roll (C2 to D#3)
+const BASE_NOTE = 36 // C2 (MIDI note number)
 
 const INSTRUMENT_CONFIG = {
   kick: {
@@ -82,15 +84,30 @@ function AmbientSoundscape() {
   const [currentStep, setCurrentStep] = useState(-1)
   const [playheadProgress, setPlayheadProgress] = useState(0)
 
+  // Piano roll / bassline state
+  const [basslineNotes, setBasslineNotes] = useState(() =>
+    Array(PIANO_ROLL_ROWS).fill(null).map(() => Array(STEPS).fill(false))
+  )
+  const [bassEnabled, setBassEnabled] = useState(true)
+  const [bassVolume, setBassVolume] = useState(-12)
+  const [glideAmount, setGlideAmount] = useState(0.1) // Portamento time in seconds
+  const [bassLayering, setBassLayering] = useState(false)
+
   const instrumentRefs = useRef({})
+  const bassSynthRef = useRef(null)
+  const bassScheduleIdRef = useRef(null)
   const scheduleIdRef = useRef(null)
   const stepRef = useRef(0)
   const patternRef = useRef(patterns)
+  const basslineNotesRef = useRef(basslineNotes)
   const isPaintingRef = useRef(false)
   const paintValueRef = useRef(false)
+  const isPaintingBassRef = useRef(false)
+  const paintBassValueRef = useRef(false)
   const animationFrameRef = useRef(null)
   const lastProgressRef = useRef(0)
   const sequencerRef = useRef(null)
+  const pianoRollRef = useRef(null)
   const playheadGeometryRef = useRef({ offset: 0, width: 0 })
   const [playheadGeometry, setPlayheadGeometry] = useState({ offset: 0, width: 0 })
 
@@ -103,8 +120,13 @@ function AmbientSoundscape() {
   }, [patterns])
 
   useEffect(() => {
+    basslineNotesRef.current = basslineNotes
+  }, [basslineNotes])
+
+  useEffect(() => {
     const stopPainting = () => {
       isPaintingRef.current = false
+      isPaintingBassRef.current = false
     }
 
     window.addEventListener('pointerup', stopPainting)
@@ -125,6 +147,32 @@ function AmbientSoundscape() {
       instrumentRefs.current[key] = INSTRUMENT_CONFIG[key].create()
     })
 
+    // Create bass synth with portamento/glide
+    bassSynthRef.current = new Tone.MonoSynth({
+      oscillator: { type: 'sawtooth' },
+      filter: {
+        Q: 2,
+        type: 'lowpass',
+        rolloff: -24
+      },
+      envelope: {
+        attack: 0.005,
+        decay: 0.3,
+        sustain: 0.6,
+        release: 0.8
+      },
+      filterEnvelope: {
+        attack: 0.01,
+        decay: 0.1,
+        sustain: 0.4,
+        release: 0.8,
+        baseFrequency: 80,
+        octaves: 3
+      },
+      portamento: 0.1,
+      volume: -12
+    }).toDestination()
+
     Tone.getTransport().bpm.value = DEFAULT_BPM
 
     return () => {
@@ -134,6 +182,11 @@ function AmbientSoundscape() {
       if (scheduleIdRef.current !== null) {
         Tone.getTransport().clear(scheduleIdRef.current)
         scheduleIdRef.current = null
+      }
+
+      if (bassScheduleIdRef.current !== null) {
+        Tone.getTransport().clear(bassScheduleIdRef.current)
+        bassScheduleIdRef.current = null
       }
 
       if (animationFrameRef.current) {
@@ -146,6 +199,10 @@ function AmbientSoundscape() {
           instrumentRefs.current[key].dispose()
         }
       })
+
+      if (bassSynthRef.current) {
+        bassSynthRef.current.dispose()
+      }
     }
   }, [])
 
@@ -159,6 +216,20 @@ function AmbientSoundscape() {
     })
   }, [volumes])
 
+  // Update bass volume
+  useEffect(() => {
+    if (bassSynthRef.current) {
+      bassSynthRef.current.volume.value = bassVolume
+    }
+  }, [bassVolume])
+
+  // Update bass glide amount (portamento)
+  useEffect(() => {
+    if (bassSynthRef.current) {
+      bassSynthRef.current.portamento = glideAmount
+    }
+  }, [glideAmount])
+
   // Update BPM
   useEffect(() => {
     Tone.getTransport().bpm.value = bpm
@@ -166,17 +237,19 @@ function AmbientSoundscape() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    if (!sequencerRef.current) return
+    if (!sequencerRef.current && !pianoRollRef.current) return
 
-    const sequencerElement = sequencerRef.current
-    const stepsElement = sequencerElement.querySelector('.sequencer-steps')
+    // Use sequencer or piano roll as reference (both have same layout)
+    const referenceElement = sequencerRef.current || pianoRollRef.current
+    const stepsElement = referenceElement.querySelector('.sequencer-steps') ||
+                        referenceElement.querySelector('.piano-roll-cells')
     if (!stepsElement) return
 
     const updateGeometry = () => {
-      const sequencerRect = sequencerElement.getBoundingClientRect()
+      const containerRect = referenceElement.getBoundingClientRect()
       const stepsRect = stepsElement.getBoundingClientRect()
 
-      const offset = stepsRect.left - sequencerRect.left
+      const offset = stepsRect.left - containerRect.left
       const width = stepsRect.width
       const previous = playheadGeometryRef.current
 
@@ -211,12 +284,18 @@ function AmbientSoundscape() {
       scheduleIdRef.current = null
     }
 
+    if (bassScheduleIdRef.current !== null) {
+      Tone.getTransport().clear(bassScheduleIdRef.current)
+      bassScheduleIdRef.current = null
+    }
+
     Tone.getTransport().position = 0
     stepRef.current = 0
     setCurrentStep(0)
     setPlayheadProgress(0)
     lastProgressRef.current = 0
 
+    // Schedule drum patterns
     if (!scheduleIdRef.current) {
       scheduleIdRef.current = Tone.getTransport().scheduleRepeat((time) => {
         const step = stepRef.current % STEPS
@@ -238,6 +317,31 @@ function AmbientSoundscape() {
       }, '16n')
     }
 
+    // Schedule bassline
+    if (!bassScheduleIdRef.current) {
+      bassScheduleIdRef.current = Tone.getTransport().scheduleRepeat((time) => {
+        const step = stepRef.current % STEPS
+
+        if (!bassEnabled || !bassSynthRef.current) return
+
+        // Find active notes in this step
+        const activeNotes = []
+        for (let row = 0; row < PIANO_ROLL_ROWS; row++) {
+          if (basslineNotesRef.current[row][step]) {
+            const midiNote = BASE_NOTE + (PIANO_ROLL_ROWS - 1 - row)
+            const frequency = Tone.Frequency(midiNote, 'midi').toFrequency()
+            activeNotes.push(frequency)
+          }
+        }
+
+        // Trigger the lowest active note (bass should be monophonic)
+        if (activeNotes.length > 0) {
+          const lowestNote = activeNotes[activeNotes.length - 1]
+          bassSynthRef.current.triggerAttackRelease(lowestNote, '16n', time)
+        }
+      }, '16n')
+    }
+
     Tone.getTransport().start()
     setIsPlaying(true)
   }
@@ -249,6 +353,10 @@ function AmbientSoundscape() {
     if (scheduleIdRef.current !== null) {
       Tone.getTransport().clear(scheduleIdRef.current)
       scheduleIdRef.current = null
+    }
+    if (bassScheduleIdRef.current !== null) {
+      Tone.getTransport().clear(bassScheduleIdRef.current)
+      bassScheduleIdRef.current = null
     }
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current)
@@ -317,6 +425,60 @@ function AmbientSoundscape() {
 
     const targetValue = paintValueRef.current
     setStepValue(instrument, index, targetValue)
+  }
+
+  // Piano Roll / Bassline functions
+  const setBassNoteValue = (row, col, value) => {
+    setBasslineNotes((prev) => {
+      if (prev[row][col] === value) {
+        return prev
+      }
+
+      const updatedGrid = prev.map((r, i) => {
+        if (i === row) {
+          const newRow = [...r]
+          newRow[col] = value
+          return newRow
+        }
+        return r
+      })
+
+      return updatedGrid
+    })
+  }
+
+  const toggleBassNote = (row, col) => {
+    const currentValue = basslineNotesRef.current[row][col]
+    setBassNoteValue(row, col, !currentValue)
+  }
+
+  const handleBassNotePointerDown = (event, row, col) => {
+    event.preventDefault()
+
+    const currentValue = basslineNotesRef.current[row][col]
+    const newValue = !currentValue
+
+    paintBassValueRef.current = newValue
+    isPaintingBassRef.current = true
+
+    setBassNoteValue(row, col, newValue)
+  }
+
+  const handleBassNotePointerEnter = (event, row, col) => {
+    if (!isPaintingBassRef.current) return
+
+    event.preventDefault()
+
+    const targetValue = paintBassValueRef.current
+    setBassNoteValue(row, col, targetValue)
+  }
+
+  const handleBassVolumeChange = (value) => {
+    setBassVolume(parseFloat(value))
+  }
+
+  const handleGlideChange = (value) => {
+    setGlideAmount(parseFloat(value))
   }
 
   useEffect(() => {
@@ -439,6 +601,86 @@ function AmbientSoundscape() {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      <div className="piano-roll-section">
+        <div className="section-header">
+          <h3>Bassline Piano Roll</h3>
+          <p>Klicke und ziehe, um Bassnoten zu zeichnen.</p>
+        </div>
+        <div className="piano-roll-controls">
+          <div className="bass-control">
+            <label>
+              <input
+                type="checkbox"
+                checked={bassEnabled}
+                onChange={(e) => setBassEnabled(e.target.checked)}
+              />
+              <span>Bass aktiviert</span>
+            </label>
+          </div>
+          <div className="bass-control">
+            <label>Volume: {bassVolume} dB</label>
+            <input
+              type="range"
+              min="-40"
+              max="0"
+              step="1"
+              value={bassVolume}
+              onChange={(e) => handleBassVolumeChange(e.target.value)}
+              disabled={!bassEnabled}
+            />
+          </div>
+          <div className="bass-control">
+            <label>Glide: {(glideAmount * 1000).toFixed(0)} ms</label>
+            <input
+              type="range"
+              min="0"
+              max="0.5"
+              step="0.01"
+              value={glideAmount}
+              onChange={(e) => handleGlideChange(e.target.value)}
+              disabled={!bassEnabled}
+            />
+          </div>
+        </div>
+        <div ref={pianoRollRef} className="piano-roll" style={playheadStyle}>
+          <div className="piano-roll-playhead" aria-hidden="true" />
+          {basslineNotes.map((row, rowIndex) => {
+            const midiNote = BASE_NOTE + (PIANO_ROLL_ROWS - 1 - rowIndex)
+            const noteName = Tone.Frequency(midiNote, 'midi').toNote()
+
+            return (
+              <div key={rowIndex} className="piano-roll-row">
+                <div className="piano-roll-label">
+                  <span>{noteName}</span>
+                </div>
+                <div className="piano-roll-cells">
+                  {row.map((isActive, colIndex) => {
+                    const isAccent = colIndex % 4 === 0
+
+                    return (
+                      <button
+                        key={colIndex}
+                        type="button"
+                        className={`piano-roll-cell${isActive ? ' active' : ''}${isAccent ? ' accent' : ''}`}
+                        onClick={(event) => {
+                          if (event.detail === 0) {
+                            toggleBassNote(rowIndex, colIndex)
+                          }
+                        }}
+                        onPointerDown={(event) => handleBassNotePointerDown(event, rowIndex, colIndex)}
+                        onPointerEnter={(event) => handleBassNotePointerEnter(event, rowIndex, colIndex)}
+                        aria-pressed={isActive}
+                        aria-label={`${noteName} Step ${colIndex + 1}`}
+                      />
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>

@@ -236,6 +236,167 @@
   outline-offset: 2px;
 }
 
+/* Piano Roll Styles */
+.piano-roll-section {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 2rem;
+  margin-top: 2rem;
+}
+
+.piano-roll-controls {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.bass-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 150px;
+}
+
+.bass-control label {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bass-control input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.bass-control input[type="range"] {
+  width: 100%;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.bass-control input[type="range"]:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.bass-control input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.bass-control input[type="range"]:disabled::-webkit-slider-thumb {
+  cursor: not-allowed;
+}
+
+.bass-control input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+.bass-control input[type="range"]:disabled::-moz-range-thumb {
+  cursor: not-allowed;
+}
+
+.piano-roll {
+  --controls-width: 50px;
+  --column-gap: 1rem;
+  position: relative;
+  padding: 0.5rem 0;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.piano-roll-playhead {
+  position: absolute;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  width: 2px;
+  background: var(--primary);
+  opacity: var(--playhead-opacity, 0);
+  transition: opacity 0.2s ease;
+  left: var(--playhead-offset, 0px);
+  transform: translateX(calc(var(--playhead-progress, 0) * var(--playhead-width, 0px)));
+  pointer-events: none;
+  z-index: 10;
+}
+
+.piano-roll-row {
+  display: grid;
+  grid-template-columns: var(--controls-width) 1fr;
+  align-items: center;
+  gap: var(--column-gap);
+  padding: 0.25rem 0;
+}
+
+.piano-roll-row + .piano-roll-row {
+  border-top: 1px solid var(--border);
+}
+
+.piano-roll-label {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-family: monospace;
+  padding-right: 0.5rem;
+}
+
+.piano-roll-cells {
+  display: grid;
+  grid-template-columns: repeat(16, minmax(0, 1fr));
+  gap: 0.25rem;
+}
+
+.piano-roll-cell {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  border: none;
+  border-radius: 4px;
+  background: var(--bg);
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.piano-roll-cell.accent {
+  background: var(--bg-secondary);
+}
+
+.piano-roll-cell:hover {
+  transform: scale(1.05);
+}
+
+.piano-roll-cell.active {
+  background: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary-dark);
+}
+
+.piano-roll-cell:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 @media (max-width: 768px) {
   .ambient-soundscape {
     padding: 1rem;
@@ -252,5 +413,18 @@
 
   .sequencer-steps {
     gap: 0.25rem;
+  }
+
+  .piano-roll-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .bass-control {
+    min-width: unset;
+  }
+
+  .piano-roll-cells {
+    gap: 0.2rem;
   }
 }
