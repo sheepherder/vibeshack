@@ -6,27 +6,31 @@
 - Build-Metadaten werden in `vite.config.js` beim Build aus Git gelesen und als `__GIT_*__` Konstante injiziert. Diese Platzhalter werden im UI (z. B. in `Home.jsx`) angezeigt und sollten nicht entfernt werden.
 
 ## Lokale Commands
-- `npm install` zum Installieren der Dependencies.
-- `npm run dev` startet den lokalen Entwicklungsserver.
-- `npm run build` erstellt den Produktionsbuild. Nutze das vor einem Commit, wenn du Build-Fehler ausschließen willst.
-- `npm run preview` startet die Vite-Preview des Produktionsbuilds.
+- `npm install` – Dependencies installieren
+- `npm run dev` – Lokaler Entwicklungsserver
+- `npm run build` – Produktionsbuild (vor Commit ausführen, um Build-Fehler zu vermeiden)
+- `npm run preview` – Vite-Preview des Produktionsbuilds
+
+## Deployment
+- Das Projekt wird automatisch über GitHub Actions auf GitHub Pages deployed, sobald Änderungen in den `main` Branch gepusht werden.
+- Die App läuft unter `/vibeshack/`, daher wird `HashRouter` verwendet.
 
 ## Code-Style & Struktur
-- Schreibe ausschließlich funktionale React-Komponenten mit Hooks (siehe `src/pages/*.jsx`).
-- Verwende `import`/`export` im ES-Modul-Stil. Neue Dateien sollten die Endung `.jsx` bzw. `.js` behalten.
-- Strings benutzen im gesamten Projekt **einfache Anführungszeichen** und es werden **keine Semikolons** gesetzt. Richte dich beim Format an den bestehenden Dateien (2 Leerzeichen Einrückung).
-- Kommentare und UI-Texte sind überwiegend auf Deutsch. Halte dich daran, wenn du neue Texte hinzufügst.
-- Für Event-Handler werden im Allgemeinen Inline-Arrow-Funktionen verwendet (`onClick={() => …}`) – übernimm dieses Muster, wenn du neue Interaktionen ergänzt.
-- Nutze vorhandene Utility-Funktionen weiter, z. B. `timeHelpers`, `csvHelpers` im Festival Planner, statt ähnliche Logik dupliziert zu schreiben.
+- Funktionale React-Komponenten mit Hooks (siehe `src/pages/*.jsx`)
+- ES-Module mit `import`/`export`, Dateien als `.jsx` bzw. `.js`
+- **Einfache Anführungszeichen** für Strings, **keine Semikolons**, 2 Leerzeichen Einrückung
+- Kommentare und UI-Texte auf **Deutsch**
+- Event-Handler als Inline-Arrow-Funktionen (`onClick={() => …}`)
+- Vorhandene Utility-Funktionen wiederverwenden (z. B. `timeHelpers`, `csvHelpers`)
 
 ## Routing & Navigation
-- Neue Seiten müssen sowohl in `src/App.jsx` als auch in der Navigation (`<nav>`) registriert werden. Achte darauf, dass der `HashRouter`-Pfad mit einem führenden `/` arbeitet (z. B. `/neues-tool`).
-- Wenn du neue Experimente hinzufügst, erweitere zusätzlich das `experiments`-Array in `Home.jsx`, damit die Startseite einen Link anzeigt.
+- Neue Seiten in `src/App.jsx` und `<nav>` registrieren, Pfad mit führendem `/` (z. B. `/neues-tool`)
+- Neue Experimente auch im `experiments`-Array in `Home.jsx` ergänzen
 
 ## Styling
-- Globale Styles und Design-Tokens (`--primary`, `--bg`, etc.) liegen in `src/index.css`. Greife auf diese CSS-Variablen zurück, statt neue Farbwerte zu streuen.
-- Für seiten- bzw. feature-spezifische Styles existieren eigene CSS-Dateien (`AmbientSoundscape.css`, `MeditationTimer.css`). Lege bei neuen Features ebenfalls eine dedizierte Datei an und importiere sie oben in der jeweiligen Komponente.
-- Halte dich bei Layouts an das bestehende Card/Grid-Muster (`.container`, `.page-title`, `.page-subtitle`).
+- Globale Styles und Design-Tokens (`--primary`, `--bg`, etc.) in `src/index.css` verwenden
+- Feature-spezifische CSS-Dateien anlegen (z. B. `AmbientSoundscape.css`) und in Komponente importieren
+- Bestehendes Layout-Muster verwenden (`.container`, `.page-title`, `.page-subtitle`)
 
 ## Festival Planner Besonderheiten
 - Sessions und Locations werden über den `useLocalStorage`-Hook in `hooks/useLocalStorage.js` persistiert. Bewahre die Schlüssel (`festival-sessions-2026`, `festival-locations-2026`) oder dokumentiere Änderungen daran.
@@ -40,9 +44,9 @@
 - Sämtliche Tone.js-Aufrufe laufen im Browser – stelle sicher, dass asynchrone Startvorgänge (`await Tone.start()`) weiterhin behandelt werden.
 
 ## Qualitätssicherung
-- Es existieren aktuell keine automatisierten Tests. Führe vor einem Commit mindestens einen manuellen Smoke-Test der betroffenen Features im Browser aus.
+- Keine automatisierten Tests: Manueller Smoke-Test im Browser vor jedem Commit
 - Halte den Build mit `npm run build` sauber. Fehlermeldungen sollten vor dem Commit behoben werden.
 
 ## PR-Hinweise
-- Halte deine Commits und PR-Beschreibungen auf Deutsch (analog zur restlichen Dokumentation).
-- Erwähne in der PR-Beschreibung, welche Experimente oder Seiten betroffen sind, damit Reviewer schnell gezielt testen können.
+- Commits und PR-Beschreibungen auf Deutsch
+- In PR-Beschreibung betroffene Experimente/Seiten für Reviewer erwähnen
