@@ -100,6 +100,7 @@ function AmbientSoundscape() {
   const stepRef = useRef(0)
   const patternRef = useRef(patterns)
   const basslineNotesRef = useRef(basslineNotes)
+  const bassEnabledRef = useRef(bassEnabled)
   const isPaintingRef = useRef(false)
   const paintValueRef = useRef(false)
   const isPaintingBassRef = useRef(false)
@@ -122,6 +123,10 @@ function AmbientSoundscape() {
   useEffect(() => {
     basslineNotesRef.current = basslineNotes
   }, [basslineNotes])
+
+  useEffect(() => {
+    bassEnabledRef.current = bassEnabled
+  }, [bassEnabled])
 
   useEffect(() => {
     const stopPainting = () => {
@@ -322,7 +327,7 @@ function AmbientSoundscape() {
       bassScheduleIdRef.current = Tone.getTransport().scheduleRepeat((time) => {
         const step = stepRef.current % STEPS
 
-        if (!bassEnabled || !bassSynthRef.current) return
+        if (!bassEnabledRef.current || !bassSynthRef.current) return
 
         // Find active notes in this step
         const activeNotes = []
