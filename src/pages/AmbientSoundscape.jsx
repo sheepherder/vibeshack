@@ -116,10 +116,12 @@ function AmbientSoundscape() {
           kickRef.current.triggerAttackRelease(kickPattern[step], '8n', time)
         }
         if (snarePattern[step]) {
+          // NoiseSynth only needs duration + scheduled time
           snareRef.current.triggerAttackRelease('8n', time)
         }
         if (hihatPattern[step]) {
-          hihatRef.current.triggerAttackRelease('32n', time)
+          // MetalSynth requires the note and the provided time for accurate scheduling
+          hihatRef.current.triggerAttackRelease(hihatPattern[step], '32n', time)
         }
         if (percPattern[step]) {
           percRef.current.triggerAttackRelease(percPattern[step], '16n', time)
