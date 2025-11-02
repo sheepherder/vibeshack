@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { timeToMinutes, calculateDurationInMinutes } from '../../../utils/timeHelpers'
+import { timeToMinutes, calculateDurationInMinutes } from '../utils/timeHelpers'
 
 /**
  * Draggable Session Block mit variabler Höhe basierend auf Dauer

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { calculateDurationInMinutes, calculateEndTime } from '../../../utils/timeHelpers'
+import { calculateDurationInMinutes, calculateEndTime } from '../utils/timeHelpers'
 
 // Dauer-Optionen für Session-Länge
 const DURATION_OPTIONS = [

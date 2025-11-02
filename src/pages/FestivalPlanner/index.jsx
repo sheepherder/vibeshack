@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext } from '@dnd-kit/sortable'
-import { useLocalStorage } from '../../hooks/useLocalStorage'
-import { calculateDurationInMinutes, addMinutes, generateTimeSlots } from '../../utils/timeHelpers'
-import { exportToCSV, importFromCSV } from '../../utils/csvHelpers'
+import { useLocalStorage } from './hooks/useLocalStorage'
+import { calculateDurationInMinutes, addMinutes, generateTimeSlots } from './utils/timeHelpers'
+import { exportToCSV, importFromCSV } from './utils/csvHelpers'
 import { GridCell, SessionEditor, LocationEditor } from './components'
 
 /**
