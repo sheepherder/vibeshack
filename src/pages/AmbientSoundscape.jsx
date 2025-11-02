@@ -18,8 +18,9 @@ function AmbientSoundscape() {
   const hihatRef = useRef(null)
   const percRef = useRef(null)
 
-  // Single sequence ref instead of multiple
-  const sequenceRef = useRef(null)
+  // Ref for scheduled event ID
+  const scheduleIdRef = useRef(null)
+  const stepRef = useRef(0)
 
   const isInitialized = useRef(false)
 
@@ -64,35 +65,6 @@ function AmbientSoundscape() {
     }).toDestination()
     percRef.current = perc
 
-    // Define patterns (null = rest, note = hit)
-    // Pattern is 16 16th notes (one bar in 4/4)
-    const kickPattern = ['C1', null, null, null, null, null, null, null, 'C1', null, null, null, null, null, null, null]
-    const snarePattern = [null, null, null, null, 'C1', null, null, null, null, null, null, null, 'C1', null, null, null]
-    const hihatPattern = ['C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null]
-    const percPattern = [null, 'G4', null, null, null, 'G4', null, null, null, 'G4', null, null, null, null, null, null]
-
-    // Create ONE sequence that controls all drums
-    // This avoids multiple parallel sequences scheduling events
-    sequenceRef.current = new Tone.Sequence(
-      (time, step) => {
-        // Trigger all drums for this step using the SAME time parameter
-        if (kickPattern[step]) {
-          kick.triggerAttackRelease(kickPattern[step], '8n', time)
-        }
-        if (snarePattern[step]) {
-          snare.triggerAttackRelease('8n', time)
-        }
-        if (hihatPattern[step]) {
-          hihat.triggerAttackRelease('32n', time)
-        }
-        if (percPattern[step]) {
-          perc.triggerAttackRelease(percPattern[step], '16n', time)
-        }
-      },
-      [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], // 16 steps
-      '16n' // Each step is a 16th note
-    )
-
     // Set BPM
     Tone.getTransport().bpm.value = bpm
 
@@ -100,8 +72,6 @@ function AmbientSoundscape() {
       // Cleanup
       Tone.getTransport().stop()
       Tone.getTransport().cancel()
-
-      if (sequenceRef.current) sequenceRef.current.dispose()
 
       if (kickRef.current) kickRef.current.dispose()
       if (snareRef.current) snareRef.current.dispose()
@@ -127,9 +97,36 @@ function AmbientSoundscape() {
     // Initialize audio context on user interaction
     await Tone.start()
 
-    // Start sequence if this is the first play
-    if (sequenceRef.current?.state === 'stopped') {
-      sequenceRef.current.start(0)
+    // Reset step counter
+    stepRef.current = 0
+
+    // Define patterns (16 steps = one bar in 4/4)
+    const kickPattern = ['C1', null, null, null, null, null, null, null, 'C1', null, null, null, null, null, null, null]
+    const snarePattern = [null, null, null, null, 'C1', null, null, null, null, null, null, null, 'C1', null, null, null]
+    const hihatPattern = ['C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null]
+    const percPattern = [null, 'G4', null, null, null, 'G4', null, null, null, 'G4', null, null, null, null, null, null]
+
+    // Schedule repeating event AFTER Tone.start()
+    if (!scheduleIdRef.current) {
+      scheduleIdRef.current = Tone.getTransport().scheduleRepeat((time) => {
+        const step = stepRef.current % 16
+
+        // Trigger drums for this step using the time parameter from Transport
+        if (kickPattern[step]) {
+          kickRef.current.triggerAttackRelease(kickPattern[step], '8n', time)
+        }
+        if (snarePattern[step]) {
+          snareRef.current.triggerAttackRelease('8n', time)
+        }
+        if (hihatPattern[step]) {
+          hihatRef.current.triggerAttackRelease('32n', time)
+        }
+        if (percPattern[step]) {
+          percRef.current.triggerAttackRelease(percPattern[step], '16n', time)
+        }
+
+        stepRef.current++
+      }, '16n')
     }
 
     // Start transport
@@ -138,8 +135,9 @@ function AmbientSoundscape() {
   }
 
   const stopLoop = () => {
-    // Stop transport only (sequence keeps running but won't trigger)
+    // Stop transport
     Tone.getTransport().stop()
+    stepRef.current = 0
     setIsPlaying(false)
   }
 
