@@ -320,8 +320,6 @@
   --column-gap: 1rem;
   position: relative;
   padding: 0.5rem 0;
-  max-height: 400px;
-  overflow-y: auto;
 }
 
 .piano-roll-playhead {
@@ -370,9 +368,9 @@
 .piano-roll-cell {
   position: relative;
   width: 100%;
-  aspect-ratio: 2 / 1;
+  aspect-ratio: 3 / 1;
   border: none;
-  border-radius: 4px;
+  border-radius: 3px;
   background: var(--bg);
   cursor: pointer;
   transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
