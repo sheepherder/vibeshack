@@ -55,6 +55,21 @@ function Home() {
           zeigt unterschiedliche Techniken und Ansätze in der Web-Entwicklung.
         </p>
       </div>
+
+      {/* Build Info - automatisch generiert bei jedem Build */}
+      <div style={{
+        marginTop: '2rem',
+        padding: '0.75rem',
+        textAlign: 'center',
+        fontSize: '0.75rem',
+        color: 'var(--text-secondary)',
+        opacity: 0.6,
+        borderTop: '1px solid var(--border)'
+      }}>
+        <div>
+          Build: {__GIT_COMMIT_DATE__} ({__GIT_COMMIT_HASH__})
+        </div>
+      </div>
     </div>
   )
 }
