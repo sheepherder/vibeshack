@@ -17,7 +17,13 @@ function AmbientSoundscape() {
   const snareRef = useRef(null)
   const hihatRef = useRef(null)
   const percRef = useRef(null)
-  const loopRef = useRef(null)
+
+  // Refs for sequences
+  const kickSeqRef = useRef(null)
+  const snareSeqRef = useRef(null)
+  const hihatSeqRef = useRef(null)
+  const percSeqRef = useRef(null)
+
   const isInitialized = useRef(false)
 
   // Initialize Tone.js instruments
@@ -62,13 +68,18 @@ function AmbientSoundscape() {
 
     return () => {
       // Cleanup
-      if (loopRef.current) loopRef.current.dispose()
+      Tone.getTransport().stop()
+      Tone.getTransport().cancel()
+
+      if (kickSeqRef.current) kickSeqRef.current.dispose()
+      if (snareSeqRef.current) snareSeqRef.current.dispose()
+      if (hihatSeqRef.current) hihatSeqRef.current.dispose()
+      if (percSeqRef.current) percSeqRef.current.dispose()
+
       if (kickRef.current) kickRef.current.dispose()
       if (snareRef.current) snareRef.current.dispose()
       if (hihatRef.current) hihatRef.current.dispose()
       if (percRef.current) percRef.current.dispose()
-      Tone.getTransport().stop()
-      Tone.getTransport().cancel()
     }
   }, [])
 
@@ -88,40 +99,81 @@ function AmbientSoundscape() {
   const startLoop = async () => {
     await Tone.start()
 
-    // Create a simple drum pattern
-    loopRef.current = new Tone.Loop((time) => {
-      // Kick on beats 1 and 3 (0 and 2 in 16th notes)
-      kickRef.current?.triggerAttackRelease('C1', '8n', time)
-      kickRef.current?.triggerAttackRelease('C1', '8n', time + Tone.Time('2n').toSeconds())
+    // Define patterns (null = rest, note = hit)
+    // Pattern is 16 16th notes (one bar in 4/4)
+    const kickPattern = ['C1', null, null, null, null, null, null, null, 'C1', null, null, null, null, null, null, null]
+    const snarePattern = [null, null, null, null, 'C1', null, null, null, null, null, null, null, 'C1', null, null, null]
+    const hihatPattern = ['C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null]
+    const percPattern = [null, 'G4', null, null, null, 'G4', null, null, null, 'G4', null, null, null, null, null, null]
 
-      // Snare on beats 2 and 4
-      snareRef.current?.triggerAttackRelease('8n', time + Tone.Time('4n').toSeconds())
-      snareRef.current?.triggerAttackRelease('8n', time + Tone.Time('2n').toSeconds() + Tone.Time('4n').toSeconds())
+    // Create sequences
+    kickSeqRef.current = new Tone.Sequence(
+      (time, note) => {
+        if (note) kickRef.current?.triggerAttackRelease(note, '8n', time)
+      },
+      kickPattern,
+      '16n'
+    )
 
-      // Hi-hat on every 8th note
-      for (let i = 0; i < 8; i++) {
-        hihatRef.current?.triggerAttackRelease('32n', time + Tone.Time('8n').toSeconds() * i)
-      }
+    snareSeqRef.current = new Tone.Sequence(
+      (time, note) => {
+        if (note) snareRef.current?.triggerAttackRelease('8n', time)
+      },
+      snarePattern,
+      '16n'
+    )
 
-      // Percussion accent on offbeat
-      percRef.current?.triggerAttackRelease('G4', '16n', time + Tone.Time('8n').toSeconds())
-      percRef.current?.triggerAttackRelease('G4', '16n', time + Tone.Time('4n').toSeconds() + Tone.Time('8n').toSeconds())
-      percRef.current?.triggerAttackRelease('G4', '16n', time + Tone.Time('2n').toSeconds() + Tone.Time('8n').toSeconds())
+    hihatSeqRef.current = new Tone.Sequence(
+      (time, note) => {
+        if (note) hihatRef.current?.triggerAttackRelease('32n', time)
+      },
+      hihatPattern,
+      '16n'
+    )
 
-    }, '1m') // Loop every measure (1m = 1 measure)
+    percSeqRef.current = new Tone.Sequence(
+      (time, note) => {
+        if (note) percRef.current?.triggerAttackRelease(note, '16n', time)
+      },
+      percPattern,
+      '16n'
+    )
 
-    loopRef.current.start(0)
+    // Start all sequences
+    kickSeqRef.current.start(0)
+    snareSeqRef.current.start(0)
+    hihatSeqRef.current.start(0)
+    percSeqRef.current.start(0)
+
     Tone.getTransport().start()
     setIsPlaying(true)
   }
 
   const stopLoop = () => {
     Tone.getTransport().stop()
-    if (loopRef.current) {
-      loopRef.current.stop()
-      loopRef.current.dispose()
-      loopRef.current = null
+
+    // Dispose sequences
+    if (kickSeqRef.current) {
+      kickSeqRef.current.stop()
+      kickSeqRef.current.dispose()
+      kickSeqRef.current = null
     }
+    if (snareSeqRef.current) {
+      snareSeqRef.current.stop()
+      snareSeqRef.current.dispose()
+      snareSeqRef.current = null
+    }
+    if (hihatSeqRef.current) {
+      hihatSeqRef.current.stop()
+      hihatSeqRef.current.dispose()
+      hihatSeqRef.current = null
+    }
+    if (percSeqRef.current) {
+      percSeqRef.current.stop()
+      percSeqRef.current.dispose()
+      percSeqRef.current = null
+    }
+
     setIsPlaying(false)
   }
 
