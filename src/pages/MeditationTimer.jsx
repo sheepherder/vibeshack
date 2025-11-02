@@ -64,7 +64,7 @@ function MeditationTimer() {
     audio.preload = 'auto'
 
     // Versuche, die Audio-Datei zu laden
-    audio.src = '/vibeshack/sounds/singing-bowl.mp3'
+    audio.src = '/vibeshack/meditation-timer/singing-bowl.mp3'
 
     audio.addEventListener('canplaythrough', () => {
       bowlAudioRef.current = audio
