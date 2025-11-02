@@ -18,11 +18,8 @@ function AmbientSoundscape() {
   const hihatRef = useRef(null)
   const percRef = useRef(null)
 
-  // Refs for sequences
-  const kickSeqRef = useRef(null)
-  const snareSeqRef = useRef(null)
-  const hihatSeqRef = useRef(null)
-  const percSeqRef = useRef(null)
+  // Single sequence ref instead of multiple
+  const sequenceRef = useRef(null)
 
   const isInitialized = useRef(false)
 
@@ -74,37 +71,26 @@ function AmbientSoundscape() {
     const hihatPattern = ['C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null]
     const percPattern = [null, 'G4', null, null, null, 'G4', null, null, null, 'G4', null, null, null, null, null, null]
 
-    // Create sequences once at initialization (but don't start them yet)
-    kickSeqRef.current = new Tone.Sequence(
-      (time, note) => {
-        if (note) kick.triggerAttackRelease(note, '8n', time)
+    // Create ONE sequence that controls all drums
+    // This avoids multiple parallel sequences scheduling events
+    sequenceRef.current = new Tone.Sequence(
+      (time, step) => {
+        // Trigger all drums for this step using the SAME time parameter
+        if (kickPattern[step]) {
+          kick.triggerAttackRelease(kickPattern[step], '8n', time)
+        }
+        if (snarePattern[step]) {
+          snare.triggerAttackRelease('8n', time)
+        }
+        if (hihatPattern[step]) {
+          hihat.triggerAttackRelease('32n', time)
+        }
+        if (percPattern[step]) {
+          perc.triggerAttackRelease(percPattern[step], '16n', time)
+        }
       },
-      kickPattern,
-      '16n'
-    )
-
-    snareSeqRef.current = new Tone.Sequence(
-      (time, note) => {
-        if (note) snare.triggerAttackRelease('8n', time)
-      },
-      snarePattern,
-      '16n'
-    )
-
-    hihatSeqRef.current = new Tone.Sequence(
-      (time, note) => {
-        if (note) hihat.triggerAttackRelease('32n', time)
-      },
-      hihatPattern,
-      '16n'
-    )
-
-    percSeqRef.current = new Tone.Sequence(
-      (time, note) => {
-        if (note) perc.triggerAttackRelease(note, '16n', time)
-      },
-      percPattern,
-      '16n'
+      [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], // 16 steps
+      '16n' // Each step is a 16th note
     )
 
     // Set BPM
@@ -115,10 +101,7 @@ function AmbientSoundscape() {
       Tone.getTransport().stop()
       Tone.getTransport().cancel()
 
-      if (kickSeqRef.current) kickSeqRef.current.dispose()
-      if (snareSeqRef.current) snareSeqRef.current.dispose()
-      if (hihatSeqRef.current) hihatSeqRef.current.dispose()
-      if (percSeqRef.current) percSeqRef.current.dispose()
+      if (sequenceRef.current) sequenceRef.current.dispose()
 
       if (kickRef.current) kickRef.current.dispose()
       if (snareRef.current) snareRef.current.dispose()
@@ -144,13 +127,9 @@ function AmbientSoundscape() {
     // Initialize audio context on user interaction
     await Tone.start()
 
-    // Start sequences if this is the first play
-    // Check if sequences haven't been started yet (state is "stopped")
-    if (kickSeqRef.current?.state === 'stopped') {
-      kickSeqRef.current?.start(0)
-      snareSeqRef.current?.start(0)
-      hihatSeqRef.current?.start(0)
-      percSeqRef.current?.start(0)
+    // Start sequence if this is the first play
+    if (sequenceRef.current?.state === 'stopped') {
+      sequenceRef.current.start(0)
     }
 
     // Start transport
@@ -159,7 +138,7 @@ function AmbientSoundscape() {
   }
 
   const stopLoop = () => {
-    // Stop transport only (don't stop sequences)
+    // Stop transport only (sequence keeps running but won't trigger)
     Tone.getTransport().stop()
     setIsPlaying(false)
   }
