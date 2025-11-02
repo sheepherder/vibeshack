@@ -1,5 +1,5 @@
 import { useDroppable } from '@dnd-kit/core'
-import { timeToMinutes, calculateDurationInMinutes } from '../../../utils/timeHelpers'
+import { timeToMinutes, calculateDurationInMinutes } from '../utils/timeHelpers'
 import { SessionBlock } from './SessionBlock'
 
 /**
