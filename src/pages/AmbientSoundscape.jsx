@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as Tone from 'tone'
 import './AmbientSoundscape.css'
 
@@ -80,13 +80,14 @@ function AmbientSoundscape() {
   const [volumes, setVolumes] = useState(createInitialVolumes)
   const [patterns, setPatterns] = useState(createInitialPatterns)
   const [currentStep, setCurrentStep] = useState(-1)
-  const [playheadProgress, setPlayheadProgress] = useState(0)
 
   const instrumentRefs = useRef({})
+  const playheadRef = useRef(null)
   const scheduleIdRef = useRef(null)
   const stepRef = useRef(0)
   const patternRef = useRef(patterns)
   const playheadAnimationRef = useRef(null)
+  const transportRef = useRef(Tone.getTransport())
 
   const isInitialized = useRef(false)
 
@@ -103,14 +104,16 @@ function AmbientSoundscape() {
       instrumentRefs.current[key] = INSTRUMENT_CONFIG[key].create()
     })
 
-    Tone.getTransport().bpm.value = DEFAULT_BPM
+    const transport = transportRef.current
+
+    transport.bpm.value = DEFAULT_BPM
 
     return () => {
-      Tone.getTransport().stop()
-      Tone.getTransport().cancel()
+      transport.stop()
+      transport.cancel()
 
       if (scheduleIdRef.current !== null) {
-        Tone.getTransport().clear(scheduleIdRef.current)
+        transport.clear(scheduleIdRef.current)
         scheduleIdRef.current = null
       }
 
@@ -134,7 +137,7 @@ function AmbientSoundscape() {
 
   // Update BPM
   useEffect(() => {
-    Tone.getTransport().bpm.value = bpm
+    transportRef.current.bpm.value = bpm
   }, [bpm])
 
   const clearPlayheadAnimation = () => {
@@ -145,13 +148,14 @@ function AmbientSoundscape() {
   }
 
   const updatePlayhead = () => {
-    const transport = Tone.getTransport()
-    const measureDuration = Tone.Time('1m').toSeconds()
+    const playheadEl = playheadRef.current
+    const transport = transportRef.current
+    const measureTicks = Tone.Time('1m').toTicks()
 
-    if (measureDuration > 0) {
-      const seconds = transport.seconds
-      const progress = (seconds % measureDuration) / measureDuration
-      setPlayheadProgress(progress)
+    if (playheadEl && measureTicks > 0) {
+      const ticksWithinMeasure = transport.ticks % measureTicks
+      const progress = ticksWithinMeasure / measureTicks
+      playheadEl.style.setProperty('--step-fraction', progress.toString())
     }
 
     playheadAnimationRef.current = requestAnimationFrame(updatePlayhead)
@@ -166,13 +170,14 @@ function AmbientSoundscape() {
   const startLoop = async () => {
     await Tone.start()
 
-    Tone.getTransport().position = 0
+    const transport = transportRef.current
+
+    transport.position = 0
     stepRef.current = 0
     setCurrentStep(0)
-    setPlayheadProgress(0)
 
     if (!scheduleIdRef.current) {
-      scheduleIdRef.current = Tone.getTransport().scheduleRepeat((time) => {
+      scheduleIdRef.current = transport.scheduleRepeat((time) => {
         const step = stepRef.current % STEPS
 
         INSTRUMENT_KEYS.forEach((instrument) => {
@@ -192,20 +197,30 @@ function AmbientSoundscape() {
       }, '16n')
     }
 
-    Tone.getTransport().start()
+    if (playheadRef.current) {
+      playheadRef.current.style.setProperty('--step-fraction', '0')
+      playheadRef.current.style.setProperty('--playhead-opacity', '1')
+    }
+
+    transport.start()
     clearPlayheadAnimation()
     playheadAnimationRef.current = requestAnimationFrame(updatePlayhead)
     setIsPlaying(true)
   }
 
   const stopLoop = () => {
-    Tone.getTransport().stop()
-    Tone.getTransport().position = 0
+    const transport = transportRef.current
+
+    transport.stop()
+    transport.position = 0
     stepRef.current = 0
     setIsPlaying(false)
     setCurrentStep(-1)
     clearPlayheadAnimation()
-    setPlayheadProgress(0)
+    if (playheadRef.current) {
+      playheadRef.current.style.setProperty('--step-fraction', '0')
+      playheadRef.current.style.setProperty('--playhead-opacity', '0')
+    }
   }
 
   const handlePlayPause = () => {
@@ -230,11 +245,6 @@ function AmbientSoundscape() {
         stepIndex === index ? !isActive : isActive
       )
     }))
-  }
-
-  const playheadStyle = {
-    '--step-fraction': playheadProgress,
-    '--playhead-opacity': isPlaying ? 1 : 0
   }
 
   return (
@@ -292,8 +302,13 @@ function AmbientSoundscape() {
           <h3>Step Sequencer</h3>
           <p>Schalte Schritte ein oder aus und forme dein eigenes Pattern.</p>
         </div>
-        <div className="sequencer" style={playheadStyle}>
-          <div className="sequencer-playhead" aria-hidden="true" />
+        <div className="sequencer">
+          <div
+            ref={playheadRef}
+            className="sequencer-playhead"
+            aria-hidden="true"
+            style={{ '--playhead-opacity': isPlaying ? 1 : 0 }}
+          />
           {INSTRUMENT_KEYS.map((instrument) => (
             <div key={instrument} className="sequencer-row">
               <div className="sequencer-label">{INSTRUMENT_CONFIG[instrument].label}</div>
