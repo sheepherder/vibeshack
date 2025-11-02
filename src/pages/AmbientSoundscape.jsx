@@ -85,12 +85,28 @@ function AmbientSoundscape() {
   const scheduleIdRef = useRef(null)
   const stepRef = useRef(0)
   const patternRef = useRef(patterns)
+  const isPaintingRef = useRef(false)
+  const paintValueRef = useRef(false)
 
   const isInitialized = useRef(false)
 
   useEffect(() => {
     patternRef.current = patterns
   }, [patterns])
+
+  useEffect(() => {
+    const stopPainting = () => {
+      isPaintingRef.current = false
+    }
+
+    window.addEventListener('pointerup', stopPainting)
+    window.addEventListener('pointercancel', stopPainting)
+
+    return () => {
+      window.removeEventListener('pointerup', stopPainting)
+      window.removeEventListener('pointercancel', stopPainting)
+    }
+  }, [])
 
   // Initialize Tone.js instruments and sequences
   useEffect(() => {
@@ -138,6 +154,7 @@ function AmbientSoundscape() {
   const startLoop = async () => {
     await Tone.start()
 
+    Tone.getTransport().stop()
     Tone.getTransport().position = 0
     stepRef.current = 0
     setCurrentStep(0)
@@ -163,7 +180,7 @@ function AmbientSoundscape() {
       }, '16n')
     }
 
-    Tone.getTransport().start()
+    Tone.getTransport().start(undefined, 0)
     setIsPlaying(true)
   }
 
@@ -173,6 +190,11 @@ function AmbientSoundscape() {
     stepRef.current = 0
     setIsPlaying(false)
     setCurrentStep(-1)
+
+    if (scheduleIdRef.current !== null) {
+      Tone.getTransport().clear(scheduleIdRef.current)
+      scheduleIdRef.current = null
+    }
   }
 
   const handlePlayPause = () => {
@@ -190,19 +212,57 @@ function AmbientSoundscape() {
     }))
   }
 
+  const setStepValue = (instrument, index, value) => {
+    setPatterns((prev) => {
+      const row = prev[instrument]
+
+      if (row[index] === value) {
+        return prev
+      }
+
+      const updatedRow = [...row]
+      updatedRow[index] = value
+
+      return {
+        ...prev,
+        [instrument]: updatedRow
+      }
+    })
+  }
+
   const toggleStep = (instrument, index) => {
-    setPatterns((prev) => ({
-      ...prev,
-      [instrument]: prev[instrument].map((isActive, stepIndex) =>
-        stepIndex === index ? !isActive : isActive
-      )
-    }))
+    const currentValue = patternRef.current[instrument][index]
+    setStepValue(instrument, index, !currentValue)
+  }
+
+  const handleStepPointerDown = (event, instrument, index) => {
+    event.preventDefault()
+
+    const currentValue = patternRef.current[instrument][index]
+    const newValue = !currentValue
+
+    paintValueRef.current = newValue
+    isPaintingRef.current = true
+
+    setStepValue(instrument, index, newValue)
+  }
+
+  const handleStepPointerEnter = (event, instrument, index) => {
+    if (!isPaintingRef.current) return
+
+    event.preventDefault()
+
+    const targetValue = paintValueRef.current
+    setStepValue(instrument, index, targetValue)
   }
 
   const playheadStyle = {
     '--step-fraction': currentStep >= 0 ? (currentStep + 0.5) / STEPS : 0,
-    '--playhead-opacity': isPlaying && currentStep >= 0 ? 1 : 0
+    '--playhead-opacity': isPlaying && currentStep >= 0 ? 1 : 0,
+    '--step-duration': `${60 / (bpm * 4)}s`
   }
+
+  const sequencerClassName = `sequencer${isPlaying ? ' is-playing' : ''}`
 
   return (
     <div className="container ambient-soundscape">
@@ -231,27 +291,6 @@ function AmbientSoundscape() {
             />
           </div>
         </div>
-
-        <div className="mixer-section">
-          <h3>Mix</h3>
-          <div className="mixer-controls">
-            {INSTRUMENT_KEYS.map((instrument) => (
-              <div key={instrument} className="volume-control">
-                <label>{INSTRUMENT_CONFIG[instrument].label}</label>
-                <input
-                  type="range"
-                  min="-40"
-                  max="0"
-                  step="1"
-                  value={volumes[instrument]}
-                  onChange={(e) => handleVolumeChange(instrument, e.target.value)}
-                  orient="vertical"
-                />
-                <span className="volume-value">{volumes[instrument]} dB</span>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
       <div className="sequencer-section">
@@ -259,11 +298,23 @@ function AmbientSoundscape() {
           <h3>Step Sequencer</h3>
           <p>Schalte Schritte ein oder aus und forme dein eigenes Pattern.</p>
         </div>
-        <div className="sequencer" style={playheadStyle}>
+        <div className={sequencerClassName} style={playheadStyle}>
           <div className="sequencer-playhead" aria-hidden="true" />
           {INSTRUMENT_KEYS.map((instrument) => (
             <div key={instrument} className="sequencer-row">
-              <div className="sequencer-label">{INSTRUMENT_CONFIG[instrument].label}</div>
+              <div className="sequencer-info">
+                <div className="sequencer-label">{INSTRUMENT_CONFIG[instrument].label}</div>
+                <input
+                  type="range"
+                  min="-40"
+                  max="0"
+                  step="1"
+                  value={volumes[instrument]}
+                  onChange={(e) => handleVolumeChange(instrument, e.target.value)}
+                  aria-label={`${INSTRUMENT_CONFIG[instrument].label} volume`}
+                />
+                <span className="volume-value">{volumes[instrument]} dB</span>
+              </div>
               <div className="sequencer-steps">
                 {patterns[instrument].map((isActive, index) => {
                   const isAccent = index % 4 === 0
@@ -274,7 +325,13 @@ function AmbientSoundscape() {
                       key={index}
                       type="button"
                       className={`sequencer-step${isActive ? ' active' : ''}${isAccent ? ' accent' : ''}${isCurrent ? ' current' : ''}`}
-                      onClick={() => toggleStep(instrument, index)}
+                      onClick={(event) => {
+                        if (event.detail === 0) {
+                          toggleStep(instrument, index)
+                        }
+                      }}
+                      onPointerDown={(event) => handleStepPointerDown(event, instrument, index)}
+                      onPointerEnter={(event) => handleStepPointerEnter(event, instrument, index)}
                       aria-pressed={isActive}
                       aria-label={`${INSTRUMENT_CONFIG[instrument].label} Step ${index + 1}`}
                     />
