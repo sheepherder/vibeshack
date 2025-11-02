@@ -20,6 +20,12 @@ function Home() {
       description: 'Timer für verschiedene Meditationsarten mit Instruktionen, anpassbaren Zeiten und Klangschalen-Sound',
       path: '/meditation-timer'
     },
+    {
+      id: 'ambient-soundscape',
+      title: 'Ambient Soundscape',
+      description: 'Relax zu einfachen, loopenden Beats - ein Drum-Loop-Player zum Viben und Entspannen',
+      path: '/ambient-soundscape'
+    },
     // Hier können später weitere Experimente hinzugefügt werden
   ]
 
