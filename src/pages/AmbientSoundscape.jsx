@@ -74,14 +74,14 @@ function AmbientSoundscape() {
     const hihatPattern = ['C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null, 'C1', null]
     const percPattern = [null, 'G4', null, null, null, 'G4', null, null, null, 'G4', null, null, null, null, null, null]
 
-    // Create sequences once at initialization
+    // Create sequences once at initialization (but don't start them yet)
     kickSeqRef.current = new Tone.Sequence(
       (time, note) => {
         if (note) kick.triggerAttackRelease(note, '8n', time)
       },
       kickPattern,
       '16n'
-    ).start(0)
+    )
 
     snareSeqRef.current = new Tone.Sequence(
       (time, note) => {
@@ -89,7 +89,7 @@ function AmbientSoundscape() {
       },
       snarePattern,
       '16n'
-    ).start(0)
+    )
 
     hihatSeqRef.current = new Tone.Sequence(
       (time, note) => {
@@ -97,7 +97,7 @@ function AmbientSoundscape() {
       },
       hihatPattern,
       '16n'
-    ).start(0)
+    )
 
     percSeqRef.current = new Tone.Sequence(
       (time, note) => {
@@ -105,7 +105,7 @@ function AmbientSoundscape() {
       },
       percPattern,
       '16n'
-    ).start(0)
+    )
 
     // Set BPM
     Tone.getTransport().bpm.value = bpm
@@ -144,13 +144,22 @@ function AmbientSoundscape() {
     // Initialize audio context on user interaction
     await Tone.start()
 
-    // Start transport (sequences are already scheduled)
+    // Start sequences if this is the first play
+    // Check if sequences haven't been started yet (state is "stopped")
+    if (kickSeqRef.current?.state === 'stopped') {
+      kickSeqRef.current?.start(0)
+      snareSeqRef.current?.start(0)
+      hihatSeqRef.current?.start(0)
+      percSeqRef.current?.start(0)
+    }
+
+    // Start transport
     Tone.getTransport().start()
     setIsPlaying(true)
   }
 
   const stopLoop = () => {
-    // Stop transport (sequences keep running but won't trigger)
+    // Stop transport only (don't stop sequences)
     Tone.getTransport().stop()
     setIsPlaying(false)
   }
