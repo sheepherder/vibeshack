@@ -87,9 +87,54 @@ const getNoteAtPosition = (notes, column) =>
 const removeNoteAtPosition = (notes, column) =>
   notes.filter((note) => !(column >= note.start && column < note.end))
 
+const notesAreEqual = (a, b) => {
+  if (a === b) return true
+  if (a.length !== b.length) return false
+
+  for (let index = 0; index < a.length; index += 1) {
+    const first = a[index]
+    const second = b[index]
+    if (first.start !== second.start || first.end !== second.end) {
+      return false
+    }
+  }
+
+  return true
+}
+
 const insertOrReplaceNote = (notes, newNote) => {
   const filtered = notes.filter((note) => note.end <= newNote.start || note.start >= newNote.end)
-  return [...filtered, newNote].sort((a, b) => a.start - b.start)
+  const updated = [...filtered, newNote].sort((a, b) => a.start - b.start)
+
+  return notesAreEqual(updated, notes) ? notes : updated
+}
+
+const applyMonophonicNote = (rows, rowIndex, newNote) => {
+  let hasChanged = false
+
+  const updatedRows = rows.map((rowNotes, index) => {
+    if (index === rowIndex) {
+      const updated = insertOrReplaceNote(rowNotes, newNote)
+      const isSame = notesAreEqual(updated, rowNotes)
+      if (!isSame) {
+        hasChanged = true
+      }
+      return isSame ? rowNotes : updated
+    }
+
+    const filtered = rowNotes.filter(
+      (note) => note.end <= newNote.start || note.start >= newNote.end
+    )
+    const isSame = notesAreEqual(filtered, rowNotes)
+
+    if (!isSame) {
+      hasChanged = true
+    }
+
+    return isSame ? rowNotes : filtered
+  })
+
+  return hasChanged ? updatedRows : rows
 }
 
 function AmbientSoundscape() {
@@ -176,9 +221,8 @@ function AmbientSoundscape() {
       instrumentRefs.current[key] = INSTRUMENT_CONFIG[key].create()
     })
 
-    // Create bass polysynth with portamento/glide
-    bassSynthRef.current = new Tone.PolySynth(Tone.MonoSynth).toDestination()
-    bassSynthRef.current.set({
+    // Monophonen Bass-Synth mit Portamento erstellen
+    bassSynthRef.current = new Tone.MonoSynth({
       oscillator: { type: 'sawtooth' },
       filter: {
         Q: 2,
@@ -199,8 +243,8 @@ function AmbientSoundscape() {
         baseFrequency: 80,
         octaves: 3
       },
-      portamento: 0.1
-    })
+      portamento: glideAmount
+    }).toDestination()
     bassSynthRef.current.volume.value = -12
 
     Tone.getTransport().bpm.value = DEFAULT_BPM
@@ -356,11 +400,14 @@ function AmbientSoundscape() {
 
         if (!bassEnabledRef.current || !bassSynthRef.current) return
 
-        for (let row = 0; row < PIANO_ROLL_ROWS; row++) {
+        let noteTriggered = false
+
+        for (let row = 0; row < PIANO_ROLL_ROWS && !noteTriggered; row++) {
           const rowNotes = basslineNotesRef.current[row]
 
-          rowNotes.forEach((note) => {
-            if (note.start !== step) return
+          for (let index = 0; index < rowNotes.length; index += 1) {
+            const note = rowNotes[index]
+            if (note.start !== step) continue
 
             const noteLength = Math.max(1, note.end - note.start)
             const durationSeconds = stepDurationSeconds * noteLength
@@ -368,7 +415,9 @@ function AmbientSoundscape() {
             const frequency = Tone.Frequency(midiNote, 'midi').toFrequency()
 
             bassSynthRef.current.triggerAttackRelease(frequency, durationSeconds, time)
-          })
+            noteTriggered = true
+            break
+          }
         }
       }, '16n')
     }
@@ -486,7 +535,7 @@ function AmbientSoundscape() {
         end: Math.min(STEPS, col + 1)
       }
 
-      updateRowNotes(row, (notes) => insertOrReplaceNote(notes, newNote))
+      setBasslineNotes((prev) => applyMonophonicNote(prev, row, newNote))
     }
   }
 
@@ -521,7 +570,7 @@ function AmbientSoundscape() {
         noteEnd: end
       }
 
-      updateRowNotes(row, (notes) => insertOrReplaceNote(notes, { start, end }))
+      setBasslineNotes((prev) => applyMonophonicNote(prev, row, { start, end }))
     }
   }
 
@@ -551,7 +600,7 @@ function AmbientSoundscape() {
       interaction.noteStart = newStart
       interaction.noteEnd = newEnd
 
-      updateRowNotes(row, (notes) => insertOrReplaceNote(notes, { start: newStart, end: newEnd }))
+      setBasslineNotes((prev) => applyMonophonicNote(prev, row, { start: newStart, end: newEnd }))
     }
   }
 
