@@ -65,6 +65,46 @@ nav a.active {
   color: var(--primary);
 }
 
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes floatGently {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
 .page-title {
   font-size: 2.5rem;
   margin-bottom: 1rem;
@@ -72,11 +112,20 @@ nav a.active {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  animation: slideInLeft 0.6s ease-out;
 }
 
 .page-subtitle {
   color: var(--text-secondary);
   margin-bottom: 3rem;
+  animation: fadeInUp 0.8s ease-out 0.2s both;
+}
+
+.section-title {
+  margin-bottom: 1rem;
+  color: var(--text-secondary);
+  opacity: 0;
+  animation: fadeInUp 0.6s ease-out 0.3s both;
 }
 
 .experiments-grid {
@@ -93,22 +142,115 @@ nav a.active {
   padding: 1.5rem;
   text-decoration: none;
   color: var(--text);
-  transition: transform 0.2s, border-color 0.2s;
+  transition: all 0.3s ease;
+  opacity: 0;
+  animation: fadeInUp 0.6s ease-out forwards;
+  position: relative;
+  overflow: hidden;
+}
+
+.experiment-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(167, 139, 250, 0.1) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: 8px;
+}
+
+.experiment-card:hover::before {
+  opacity: 1;
+}
+
+.experiment-card:nth-child(1) {
+  animation-delay: 0.4s;
+}
+
+.experiment-card:nth-child(2) {
+  animation-delay: 0.5s;
+}
+
+.experiment-card:nth-child(3) {
+  animation-delay: 0.6s;
+}
+
+.experiment-card:nth-child(4) {
+  animation-delay: 0.7s;
+}
+
+.experiment-card:nth-child(5) {
+  animation-delay: 0.8s;
+}
+
+.experiment-card:nth-child(6) {
+  animation-delay: 0.9s;
 }
 
 .experiment-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-8px) scale(1.02);
   border-color: var(--primary);
+  box-shadow: 0 12px 40px rgba(99, 102, 241, 0.3);
 }
 
 .experiment-card h3 {
   color: var(--primary);
   margin-bottom: 0.5rem;
+  position: relative;
+  z-index: 1;
+  transition: transform 0.3s ease;
+}
+
+.experiment-card:hover h3 {
+  transform: translateX(4px);
 }
 
 .experiment-card p {
   color: var(--text-secondary);
   font-size: 0.9rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Home page specific styles */
+.about-section {
+  margin-top: 3rem;
+  padding: 1.5rem;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  opacity: 0;
+  animation: fadeInUp 0.8s ease-out 1s forwards;
+  transition: all 0.3s ease;
+}
+
+.about-section:hover {
+  border-color: var(--primary);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.2);
+  transform: translateY(-2px);
+}
+
+.about-section h3 {
+  margin-bottom: 0.5rem;
+  color: var(--text);
+}
+
+.about-section p {
+  color: var(--text-secondary);
+}
+
+.build-info {
+  margin-top: 2rem;
+  padding: 0.75rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  opacity: 0;
+  border-top: 1px solid var(--border);
+  animation: fadeIn 1s ease-out 1.2s forwards;
 }
 
 .calculator {

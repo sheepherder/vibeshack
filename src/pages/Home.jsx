@@ -37,7 +37,7 @@ function Home() {
         Web-Technologien und interaktive Demos.
       </p>
 
-      <h2 style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }}>
+      <h2 className="section-title">
         Verfügbare Experimente
       </h2>
 
@@ -54,24 +54,16 @@ function Home() {
         ))}
       </div>
 
-      <div style={{ marginTop: '3rem', padding: '1.5rem', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-        <h3 style={{ marginBottom: '0.5rem' }}>Über dieses Projekt</h3>
-        <p style={{ color: 'var(--text-secondary)' }}>
+      <div className="about-section">
+        <h3>Über dieses Projekt</h3>
+        <p>
           VibeShack ist ein Playground für verschiedene Web-Experimente. Jedes Experiment
           zeigt unterschiedliche Techniken und Ansätze in der Web-Entwicklung.
         </p>
       </div>
 
       {/* Build Info - automatisch generiert bei jedem Build */}
-      <div style={{
-        marginTop: '2rem',
-        padding: '0.75rem',
-        textAlign: 'center',
-        fontSize: '0.75rem',
-        color: 'var(--text-secondary)',
-        opacity: 0.6,
-        borderTop: '1px solid var(--border)'
-      }}>
+      <div className="build-info">
         <div>
           Build: {__GIT_COMMIT_DATE__} ({__GIT_COMMIT_HASH__})
         </div>
