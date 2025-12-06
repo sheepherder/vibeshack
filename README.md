@@ -40,4 +40,4 @@ npm run preview
 
 Das Projekt wird automatisch über GitHub Actions auf GitHub Pages deployed, sobald Änderungen in den `main` Branch gepusht werden.
 
-Auf github.dev kann man direkt editieren.
+Ich fände es sehr schön wenn dieser Satz hier erscheint.
