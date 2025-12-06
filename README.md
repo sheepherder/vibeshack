@@ -1,43 +1,40 @@
 # VibeShack 🎨
 
-Eine Sammlung von kreativen Web-Experimenten und interaktiven Demos.
+Kompakte Sammlung von kreativen Web-Experimenten und interaktiven Demos.
 
 ## Live Demo
 
 Die App wird automatisch auf GitHub Pages deployed: [vibeshack](https://sheepherder.github.io/vibeshack/)
 
-## Experimente
+## Experimente im Überblick
 
-- **Taschenrechner** - Ein minimalistischer Taschenrechner mit modernem Design
-- **Festival Planner** - Interaktives Tool zur Planung von Festival-Programmen mit Drag & Drop, Sessions-Verwaltung und CSV Import/Export
-- **Ambient Music Generator** - Generativer Ambient-Musik-Synthesizer mit mehreren Spuren (Deep Bass, Rhythmic Pulse, Cosmic Pad, Melodic Lead, Hi-Hats, Texture) und Auto-Modus
-- **Meditation Timer** - Meditations-Timer mit verschiedenen Meditationstypen (Metta/Liebende Güte) und Klangschalen-Sound
+- **Taschenrechner** – Minimalistischer Rechner mit modernem Layout
+- **Festival Planner** – Programmplanung mit Drag & Drop, Sessions-Verwaltung und CSV Import/Export
+- **Ambient Music Generator** – Generativer Ambient-Synth mit mehreren Spuren (Deep Bass, Rhythmic Pulse, Cosmic Pad, Melodic Lead, Hi-Hats, Texture) und Auto-Modus
+- **Meditation Timer** – Timer für verschiedene Meditationstypen (u. a. Metta/Liebende Güte) inklusive Klangschale
 
-## Entwicklung
+## Schnellstart
 
 ```bash
-# Dependencies installieren
+# Abhängigkeiten installieren
 npm install
 
-# Development Server starten
+# Entwicklungsserver starten (HashRouter unter /vibeshack/)
 npm run dev
 
-# Für Production bauen
+# Produktionsbuild erstellen
 npm run build
 
-# Production Preview
+# Produktionsbuild lokal ansehen
 npm run preview
 ```
 
 ## Tech Stack
 
-- React
-- Vite
-- React Router
-- GitHub Pages
+- React + Vite
+- React Router (HashRouter für GitHub Pages)
+- GitHub Pages Deployment über GitHub Actions
 
 ## Deployment
 
-Das Projekt wird automatisch über GitHub Actions auf GitHub Pages deployed, sobald Änderungen in den `main` Branch gepusht werden.
-
-Ich fände es sehr schön wenn dieser Satz hier erscheint.
+Jeder Push auf den `main` Branch triggert automatisch den GitHub Pages Deploy.
